@@ -62,4 +62,13 @@ class TraceRecorderTest {
         assertEquals("New#fresh()", r.getRoot().getSignature());
         assertEquals(0, r.getRoot().getId());
     }
+
+    @Test
+    void unmatchedExitIsIgnored() {
+        TraceRecorder r = new TraceRecorder();
+        r.start();
+        r.exit(10); // 没有配对的 enter
+        assertNull(r.getRoot());
+        r.stop();
+    }
 }
