@@ -6,6 +6,11 @@ public class Trace {
     private final String capturedAt;   // ISO-8601
     private final TraceNode root;
 
+    /**
+     * @param entrySignature signature of the entry method
+     * @param capturedAt     ISO-8601 instant string, e.g. {@code 2026-06-16T00:00:00Z}
+     * @param root           root node of the captured call tree
+     */
     public Trace(String entrySignature, String capturedAt, TraceNode root) {
         this.entrySignature = entrySignature;
         this.capturedAt = capturedAt;

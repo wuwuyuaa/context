@@ -28,4 +28,10 @@ class TraceNodeTest {
 
         assertEquals(0, root.selfMs());
     }
+
+    @Test
+    void getChildrenIsUnmodifiable() {
+        TraceNode n = new TraceNode(0, "A#a()", "A.java", 0);
+        assertThrows(UnsupportedOperationException.class, () -> n.getChildren().add(n));
+    }
 }

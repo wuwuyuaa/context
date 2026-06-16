@@ -1,7 +1,9 @@
 package com.threadmap.core.trace;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /** 调用树的一个节点;一个 Bean 方法调用对应一个节点。 */
 public class TraceNode {
@@ -19,13 +21,15 @@ public class TraceNode {
         this.line = line;
     }
 
-    public void addChild(TraceNode child) { children.add(child); }
+    public void addChild(TraceNode child) {
+        children.add(Objects.requireNonNull(child, "child must not be null"));
+    }
     public void setElapsedMs(long ms) { this.elapsedMs = ms; }
 
     /** 自身耗时 = 总耗时 - 直接子节点总耗时,负数归零。 */
     public long selfMs() {
         long childSum = 0;
-        for (TraceNode c : children) childSum += c.elapsedMs;
+        for (TraceNode c : children) childSum += c.getElapsedMs();
         return Math.max(0, elapsedMs - childSum);
     }
 
@@ -34,5 +38,7 @@ public class TraceNode {
     public String getFile() { return file; }
     public int getLine() { return line; }
     public long getElapsedMs() { return elapsedMs; }
-    public List<TraceNode> getChildren() { return children; }
+    public List<TraceNode> getChildren() {
+        return Collections.unmodifiableList(children);
+    }
 }
