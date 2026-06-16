@@ -26,11 +26,13 @@ public class ThreadmapAspect {
         if (!recorder.isRecording()) {
             return pjp.proceed();
         }
-        MethodSignature ms = (MethodSignature) pjp.getSignature();
+        if (!(pjp.getSignature() instanceof MethodSignature ms)) {
+            return pjp.proceed(); // 非方法连接点(构造器/字段),跳过
+        }
         String signature = SignatureFormatter.format(ms.getMethod());
         String file = SourceLocation.fileFor(ms.getDeclaringType());
         recorder.enter(signature, file, 0);
-        long startNs = System.nanoTime();
+        long startNs = System.nanoTime(); // 计时在 enter 之后开始,记录开销不计入方法耗时
         try {
             return pjp.proceed();
         } finally {

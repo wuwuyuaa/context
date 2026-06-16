@@ -4,6 +4,7 @@ import com.threadmap.core.trace.Trace;
 import com.threadmap.core.trace.TraceJsonWriter;
 import com.threadmap.core.trace.TraceNode;
 import com.threadmap.core.trace.TraceRecorder;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,11 @@ class BeanLevelTraceIntegrationTest {
 
     @Autowired
     TraceRecorder recorder;
+
+    @AfterEach
+    void stopRecording() {
+        recorder.stop(); // recorder 是单例 Bean,确保用例之间不串状态
+    }
 
     @Test
     void capturesBeanLevelCallTreeAndWritesTraceJson(@TempDir Path tmp) throws Exception {
