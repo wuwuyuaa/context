@@ -179,3 +179,12 @@
 - 埋点粒度默认 Bean 级 vs 方法级(倾向 Bean 级)。
 - 标注用哪个模型 / 是否离线降级。
 - `.threadmap/progress.json` 是否默认进 VCS(倾向默认 gitignore,团队共享时再放开)。
+- **M2 签名碰撞策略**:`signature`(`类#方法(简单参数类型)`)是进度合并 / 标注缓存 / PSI 反查的关联键。当前用简单参数类型,**重载方法**或不同包同名类型参数会产生相同签名而被合并。M2 需定碰撞策略(参数用 FQN、或加 arity、或文档化唯一性假设)。
+
+---
+
+## 11. 实现进度
+
+- **M1(core 追踪)已实现** —— `threadmap-core` 模块(Java/Gradle):测试触发一次真实 Spring 请求 → Bean 级 AOP 采集调用树 → `trace.json`(`entry_signature` / `captured_at` / `root{id, signature, file, line, self_ms, children[]}`)。15 个测试全绿,含一个端到端 `@SpringBootTest`(`SampleController → SampleService → SampleRepository`)。计划见 [plans/2026-06-16-threadmap-core-m1-bean-level-tracing.md](../plans/2026-06-16-threadmap-core-m1-bean-level-tracing.md)。
+- **下一步:** M2(core:包名折叠 + 绑证据 LLM 标注 + 哈希缓存 → `annotated-tree.json`),随后 M3(IntelliJ 插件)。
+- **M1 已知/接受的采集限制**(M2/M3 不应假设其反面):AOP 拦不到 Bean 内自调用、普通(非 Bean)对象、跨线程异步分支;`line` 恒为 0,由插件用 PSI 按 `signature` 反查。`TraceRecorder` 是单例,靠 `start()/stop()` + 测试触发/入口隔离保证"同时只录一条",多触发并发需另行设计。
