@@ -35,10 +35,10 @@ public class CachingAnnotator implements Annotator {
     private static String cacheKey(AnnotationRequest request) {
         // calleeSignatures 不参与 key:它们由 source 解析得出(同 source ⇒ 同 callees),
         // 故方法体(source)哈希已能唯一确定 prompt;无 source 时退化为 signature。
-        String basis = request.source() != null && !request.source().isBlank()
-                ? request.source()
-                : request.signature();
-        return sha256(basis);
+        // 前缀 src:/sig: 防止 source 内容与 signature 字符串意外碰撞。
+        boolean hasSource = request.source() != null && !request.source().isBlank();
+        String basis = hasSource ? request.source() : request.signature();
+        return sha256((hasSource ? "src:" : "sig:") + basis);
     }
 
     private static String sha256(String input) {

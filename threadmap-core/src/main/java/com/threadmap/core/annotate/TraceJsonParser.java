@@ -11,15 +11,20 @@ public class TraceJsonParser {
 
     public AnnotatedTree parse(String traceJson) throws IOException {
         JsonNode root = MAPPER.readTree(traceJson);
-        JsonNode rootField = root.get("root");
-        if (rootField == null || rootField.isNull()) {
-            throw new IOException("trace.json missing required field: root");
-        }
-        AnnotatedNode rootNode = node(rootField);
+        JsonNode rootField = requireField(root, "root", traceJson);
         return new AnnotatedTree(
-                root.get("entry_signature").asText(),
-                root.get("captured_at").asText(),
-                rootNode);
+                requireField(root, "entry_signature", traceJson).asText(),
+                requireField(root, "captured_at", traceJson).asText(),
+                node(rootField));
+    }
+
+    // 参数 json 暂未插值,刻意保留以备将来在错误消息里附带 JSON 上下文(见 M2b-2 计划)。
+    private static JsonNode requireField(JsonNode obj, String name, String json) throws IOException {
+        JsonNode f = obj.get(name);
+        if (f == null || f.isNull()) {
+            throw new IOException("trace.json missing required field: " + name);
+        }
+        return f;
     }
 
     private AnnotatedNode node(JsonNode n) {

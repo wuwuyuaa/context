@@ -2,6 +2,7 @@ package com.threadmap.core.annotate;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import java.io.IOException;
 
 class TraceJsonParserTest {
 
@@ -50,5 +51,30 @@ class TraceJsonParserTest {
         // 解析出的节点默认未折叠、未标注
         assertFalse(root.isCollapsed());
         assertNull(root.getAnnotation());
+    }
+
+    @Test
+    void rejectsMissingRootWithClearError() {
+        String bad = "{\"entry_signature\":\"A#a()\",\"captured_at\":\"t\"}";
+        IOException e = assertThrows(IOException.class, () -> new TraceJsonParser().parse(bad));
+        assertTrue(e.getMessage().contains("root"));
+    }
+
+    @Test
+    void rejectsMissingEntrySignatureWithClearError() {
+        String bad = """
+            {"captured_at":"t","root":{"id":0,"signature":"A#a()","file":"A.java","line":0,"self_ms":1,"children":[]}}
+            """;
+        IOException e = assertThrows(IOException.class, () -> new TraceJsonParser().parse(bad));
+        assertTrue(e.getMessage().contains("entry_signature"));
+    }
+
+    @Test
+    void rejectsMissingCapturedAtWithClearError() {
+        String bad = """
+            {"entry_signature":"A#a()","root":{"id":0,"signature":"A#a()","file":"A.java","line":0,"self_ms":1,"children":[]}}
+            """;
+        IOException e = assertThrows(IOException.class, () -> new TraceJsonParser().parse(bad));
+        assertTrue(e.getMessage().contains("captured_at"));
     }
 }
