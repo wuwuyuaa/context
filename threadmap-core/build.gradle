@@ -24,6 +24,7 @@ dependencies {
     implementation 'org.springframework:spring-aop'
     implementation 'org.aspectj:aspectjweaver'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'dev.langchain4j:langchain4j-community-dashscope:1.9.0-beta16'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-web'
     testImplementation 'org.springframework.boot:spring-boot-starter-aop'
