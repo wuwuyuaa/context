@@ -173,12 +173,11 @@
 - UI:默认右侧停靠;版本2 布局 + 列式树 + 左侧状态色条 + 表格证据 + 待查独立面板;原生 IntelliJ 质感。
 - 进度存 `.threadmap/progress.json`,按 signature,与树分离。
 - inline 展开/详情多 tab → v2;过时检测 → v2;IDE 内触发 → v1.1。
-- **M2 标注栈:LangChain4j + DashScope(Qwen)**(用户定,非 Anthropic);LLM 不可用时离线降级到 `FakeAnnotator`。
+- **M2 标注栈:LangChain4j + DashScope(Qwen)**(用户定,非 Anthropic),默认模型 **`qwen3.6-flash`**(百炼/Model Studio 文本生成);LLM 不可用时离线降级到 `FakeAnnotator`。
 
 **仍待定(部分承自 v0.2):**
 - 基线 IDE 版本号。
 - 埋点粒度默认 Bean 级 vs 方法级(倾向 Bean 级)。
-- Qwen 的确切 DashScope 模型 id(用户指 "qwen3.6flash";`qwen-flash` 为占位默认,落地核对)。
 - `.threadmap/progress.json` 是否默认进 VCS(倾向默认 gitignore,团队共享时再放开)。
 - **M2 签名碰撞策略**:`signature`(`类#方法(简单参数类型)`)是进度合并 / 标注缓存 / PSI 反查的关联键。当前用简单参数类型,**重载方法**或不同包同名类型参数会产生相同签名而被合并。M2 需定碰撞策略(参数用 FQN、或加 arity、或文档化唯一性假设)。
 

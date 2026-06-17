@@ -14,7 +14,7 @@
 - 依赖:`dev.langchain4j:langchain4j-community-dashscope:1.9.0-beta16`(用前在 Maven Central 核对最新版)。
 - `ChatModel model = QwenChatModel.builder().apiKey(key).modelName(model).temperature(0.2).maxTokens(1024).build();`(`dev.langchain4j.community.model.dashscope.QwenChatModel` → `dev.langchain4j.model.chat.ChatModel`)。
 - 调用:`String reply = model.chat(prompt);`(`String chat(String)` 便捷方法)。
-- API key:环境变量 `DASHSCOPE_API_KEY`。默认模型名:`qwen-flash`(用户指定 "qwen3.6flash" —— 落地时用 DashScope 实际模型 id;模型名是配置项)。
+- API key:环境变量 `DASHSCOPE_API_KEY`。默认模型名:**`qwen3.6-flash`**(百炼/Model Studio 文本生成;模型名是配置项)。
 
 **范围边界:**
 - 不调用任何 LLM、不读源码文件:`FakeAnnotator` 从签名派生确定性占位标注。
@@ -948,7 +948,7 @@ git commit -m "feat(core): add annotation pipeline (trace.json -> annotated tree
 
 ## 后续(M2b,另开计划)
 
-- 引入 `dev.langchain4j:langchain4j-community-dashscope`,实现 `QwenAnnotator implements Annotator`(`QwenChatModel` + `model.chat(prompt)` → JSON → Jackson 解析,绑定证据 prompt,默认模型 `qwen-flash` 可配,`DASHSCOPE_API_KEY`)。
+- 引入 `dev.langchain4j:langchain4j-community-dashscope`,实现 `QwenAnnotator implements Annotator`(`QwenChatModel` + `model.chat(prompt)` → JSON → Jackson 解析,绑定证据 prompt,默认模型 `qwen3.6-flash` 可配,`DASHSCOPE_API_KEY`)。
 - 用 JavaParser 按 `signature` 抽取方法源码 + 直接被调签名,填充 `AnnotationRequest`(供真实标注)。
 - 方法体哈希缓存:同一方法体不重复调用 LLM。
 - 离线降级:LLM 不可用时回退 `FakeAnnotator`。
