@@ -16,6 +16,7 @@ public class QwenAnnotator implements Annotator {
         this(chat, new PromptBuilder(), new AnnotationJsonParser(), fallback);
     }
 
+    /** For testing: inject collaborators directly. */
     QwenAnnotator(ChatFn chat, PromptBuilder promptBuilder,
                   AnnotationJsonParser jsonParser, Annotator fallback) {
         this.chat = Objects.requireNonNull(chat, "chat");
@@ -30,6 +31,7 @@ public class QwenAnnotator implements Annotator {
             String reply = chat.chat(promptBuilder.build(request));
             return jsonParser.parse(reply);
         } catch (RuntimeException e) {
+            // TODO(M2b-2): log e once a logging framework is on the classpath
             return fallback.annotate(request);
         }
     }
