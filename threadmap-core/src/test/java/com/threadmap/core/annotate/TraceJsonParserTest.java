@@ -13,7 +13,7 @@ class TraceJsonParserTest {
             "id" : 0,
             "signature" : "A#a()",
             "file" : "com/example/A.java",
-            "line" : 0,
+            "line" : 42,
             "self_ms" : 70,
             "children" : [ {
               "id" : 1,
@@ -38,6 +38,7 @@ class TraceJsonParserTest {
         assertEquals(0, root.getId());
         assertEquals("A#a()", root.getSignature());
         assertEquals("com/example/A.java", root.getFile());
+        assertEquals(42, root.getLine());
         assertEquals(70, root.getSelfMs());
         assertEquals(1, root.getChildren().size());
 

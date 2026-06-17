@@ -11,7 +11,11 @@ public class TraceJsonParser {
 
     public AnnotatedTree parse(String traceJson) throws IOException {
         JsonNode root = MAPPER.readTree(traceJson);
-        AnnotatedNode rootNode = node(root.get("root"));
+        JsonNode rootField = root.get("root");
+        if (rootField == null || rootField.isNull()) {
+            throw new IOException("trace.json missing required field: root");
+        }
+        AnnotatedNode rootNode = node(rootField);
         return new AnnotatedTree(
                 root.get("entry_signature").asText(),
                 root.get("captured_at").asText(),
