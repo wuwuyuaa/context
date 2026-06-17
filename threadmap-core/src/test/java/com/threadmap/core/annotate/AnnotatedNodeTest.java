@@ -32,4 +32,10 @@ class AnnotatedNodeTest {
         assertThrows(UnsupportedOperationException.class,
                 () -> n.getChildren().add(n));
     }
+
+    @Test
+    void addChildRejectsNull() {
+        AnnotatedNode n = new AnnotatedNode(0, "A#a()", "A.java", 0, 1);
+        assertThrows(NullPointerException.class, () -> n.addChild(null));
+    }
 }

@@ -3,6 +3,7 @@ package com.threadmap.core.annotate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /** 标注树节点:trace 节点数据 + 折叠标记 + (可选)AI 标注 + 用户掌握状态。 */
 public class AnnotatedNode {
@@ -24,10 +25,10 @@ public class AnnotatedNode {
         this.selfMs = selfMs;
     }
 
-    public void addChild(AnnotatedNode child) { children.add(child); }
+    public void addChild(AnnotatedNode child) { children.add(Objects.requireNonNull(child, "child must not be null")); }
     public void setCollapsed(boolean collapsed) { this.collapsed = collapsed; }
     public void setAnnotation(Annotation annotation) { this.annotation = annotation; }
-    public void setUnderstanding(Understanding understanding) { this.understanding = understanding; }
+    public void setUnderstanding(Understanding understanding) { this.understanding = Objects.requireNonNull(understanding, "understanding must not be null"); }
 
     public int getId() { return id; }
     public String getSignature() { return signature; }
