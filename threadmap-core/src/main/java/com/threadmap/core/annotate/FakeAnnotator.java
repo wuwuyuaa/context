@@ -23,11 +23,12 @@ public class FakeAnnotator implements Annotator {
 
     private static String methodName(String signature) {
         int hash = signature.indexOf('#');
-        int paren = signature.indexOf('(', hash + 1);
-        if (hash >= 0 && paren > hash) {
-            return signature.substring(hash + 1, paren);
+        if (hash < 0) {
+            return signature;
         }
-        return signature;
+        int paren = signature.indexOf('(', hash + 1);
+        return paren > hash ? signature.substring(hash + 1, paren)
+                            : signature.substring(hash + 1);
     }
 
     private static String fileOf(String signature) {

@@ -31,4 +31,12 @@ class FakeAnnotatorTest {
         assertNull(req.source());
         assertTrue(req.calleeSignatures().isEmpty());
     }
+
+    @Test
+    void stripsNestedClassForEvidenceFile() {
+        Annotation a = new FakeAnnotator().annotate(
+                AnnotationRequest.ofSignature("com.example.Outer$Inner#run()"));
+        assertEquals("com/example/Outer.java", a.evidence().file());
+        assertTrue(a.summary().contains("run"));
+    }
 }

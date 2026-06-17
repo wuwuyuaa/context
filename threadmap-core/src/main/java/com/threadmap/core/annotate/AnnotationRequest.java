@@ -7,6 +7,10 @@ import java.util.List;
  * M2a 只用 signature;M2b 填充 source / calleeSignatures 供真实 LLM 标注。
  */
 public record AnnotationRequest(String signature, String source, List<String> calleeSignatures) {
+    public AnnotationRequest {
+        calleeSignatures = calleeSignatures == null ? List.of() : List.copyOf(calleeSignatures);
+    }
+
     public static AnnotationRequest ofSignature(String signature) {
         return new AnnotationRequest(signature, null, List.of());
     }
