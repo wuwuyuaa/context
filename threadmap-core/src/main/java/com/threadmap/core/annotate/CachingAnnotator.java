@@ -26,12 +26,15 @@ public class CachingAnnotator implements Annotator {
         if (cached != null) {
             return cached;
         }
-        Annotation fresh = delegate.annotate(request);
+        Annotation fresh = Objects.requireNonNull(
+                delegate.annotate(request), "delegate returned null annotation");
         cache.put(key, fresh);
         return fresh;
     }
 
     private static String cacheKey(AnnotationRequest request) {
+        // calleeSignatures 不参与 key:它们由 source 解析得出(同 source ⇒ 同 callees),
+        // 故方法体(source)哈希已能唯一确定 prompt;无 source 时退化为 signature。
         String basis = request.source() != null && !request.source().isBlank()
                 ? request.source()
                 : request.signature();

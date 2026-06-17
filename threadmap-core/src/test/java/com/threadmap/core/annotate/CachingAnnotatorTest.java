@@ -13,6 +13,11 @@ class CachingAnnotatorTest {
     }
 
     @Test
+    void rejectsNullDelegate() {
+        assertThrows(NullPointerException.class, () -> new CachingAnnotator(null));
+    }
+
+    @Test
     void cachesByMethodBodyAndAvoidsRedundantCalls() {
         AtomicInteger calls = new AtomicInteger();
         Annotator counting = req -> { calls.incrementAndGet(); return dummy(); };
