@@ -186,5 +186,7 @@
 ## 11. 实现进度
 
 - **M1(core 追踪)已实现** —— `threadmap-core` 模块(Java/Gradle):测试触发一次真实 Spring 请求 → Bean 级 AOP 采集调用树 → `trace.json`(`entry_signature` / `captured_at` / `root{id, signature, file, line, self_ms, children[]}`)。15 个测试全绿,含一个端到端 `@SpringBootTest`(`SampleController → SampleService → SampleRepository`)。计划见 [plans/2026-06-16-threadmap-core-m1-bean-level-tracing.md](../plans/2026-06-16-threadmap-core-m1-bean-level-tracing.md)。
-- **下一步:** M2 已拆为 **M2a**(处理骨架 + 离线标注,计划见 [plans/2026-06-17-threadmap-core-m2a-annotation-skeleton.md](../plans/2026-06-17-threadmap-core-m2a-annotation-skeleton.md))+ **M2b**(真实 Qwen 标注 + JavaParser 源码抽取 + 哈希缓存);随后 M3(IntelliJ 插件)。
+- **M2a(处理骨架)已实现** —— `trace.json` → 包名折叠 → 懒标(离线 `FakeAnnotator`)→ `annotated-tree.json`。计划见 [plans/2026-06-17-threadmap-core-m2a-annotation-skeleton.md](../plans/2026-06-17-threadmap-core-m2a-annotation-skeleton.md)。
+- **M2b-1(Qwen 标注器栈)已实现** —— `PromptBuilder`(绑证据)+ `AnnotationJsonParser`(容错)+ `QwenAnnotator`(LangChain4j/DashScope,默认 `qwen3.6-flash`,失败降级 `FakeAnnotator`)+ `CachingAnnotator`(方法体哈希),全程离线可测。计划见 [plans/2026-06-17-threadmap-core-m2b1-qwen-annotator.md](../plans/2026-06-17-threadmap-core-m2b1-qwen-annotator.md)。当前 **42 测试全绿**,均在 `main`。
+- **下一步:** M2b-2 —— JavaParser 按 `signature` 抽方法源码 + 直接被调签名、流水接线注入 Qwen 链、CLI(`trace.json` → `.threadmap/annotated-tree.json`)、`TraceJsonParser` 字段校验加固;随后 M3(IntelliJ 插件)。
 - **M1 已知/接受的采集限制**(M2/M3 不应假设其反面):AOP 拦不到 Bean 内自调用、普通(非 Bean)对象、跨线程异步分支;`line` 恒为 0,由插件用 PSI 按 `signature` 反查。`TraceRecorder` 是单例,靠 `start()/stop()` + 测试触发/入口隔离保证"同时只录一条",多触发并发需另行设计。
