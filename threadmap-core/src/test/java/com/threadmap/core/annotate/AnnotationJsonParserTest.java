@@ -44,4 +44,17 @@ class AnnotationJsonParserTest {
         assertFalse(a.digWorthy());
         assertNull(a.digReason());
     }
+
+    @Test
+    void throwsOnGarbage() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new AnnotationJsonParser().parse("not json at all"));
+    }
+
+    @Test
+    void toleratesLeadingAndTrailingProseWithoutFence() {
+        String reply = "Sure! Here is the result:\n{\"summary\":\"only summary\"}\nLet me know if you need more.";
+        Annotation a = new AnnotationJsonParser().parse(reply);
+        assertEquals("only summary", a.summary());
+    }
 }
