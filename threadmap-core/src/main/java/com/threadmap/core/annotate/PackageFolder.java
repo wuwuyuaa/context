@@ -11,7 +11,7 @@ public class PackageFolder {
     private final int maxDepth;
 
     public PackageFolder(List<String> includePackages, int maxDepth) {
-        this.includePackages = includePackages;
+        this.includePackages = List.copyOf(includePackages);
         this.maxDepth = maxDepth;
     }
 
@@ -31,7 +31,7 @@ public class PackageFolder {
         int hash = signature.indexOf('#');
         String fqcn = hash >= 0 ? signature.substring(0, hash) : signature;
         for (String prefix : includePackages) {
-            if (fqcn.startsWith(prefix)) {
+            if (fqcn.startsWith(prefix + ".") || fqcn.equals(prefix)) {
                 return true;
             }
         }
