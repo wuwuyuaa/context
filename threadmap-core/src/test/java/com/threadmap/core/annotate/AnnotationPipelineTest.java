@@ -29,6 +29,27 @@ class AnnotationPipelineTest {
         """;
 
     @Test
+    void usesInjectedRequestBuilderForVisibleNodes() throws Exception {
+        java.util.List<String> asked = new java.util.ArrayList<>();
+        AnnotationRequestBuilder recording = node -> {
+            asked.add(node.getSignature());
+            return AnnotationRequest.ofSignature(node.getSignature());
+        };
+        AnnotationPipeline pipeline = new AnnotationPipeline(
+                new PackageFolder(java.util.List.of("com.example"), 10),
+                new FakeAnnotator(),
+                recording);
+
+        pipeline.run(TRACE_JSON);  // reuse this class's existing TRACE_JSON constant
+
+        // visible business nodes are asked; the collapsed library node is not
+        assertTrue(asked.contains("com.example.Controller#handle()"));
+        assertTrue(asked.contains("com.example.Service#work()"));
+        assertFalse(asked.contains("org.springframework.Tx#run()"), "折叠节点不应构造请求");
+        assertEquals(2, asked.size(), "恰好两个未折叠节点被请求,无重复");
+    }
+
+    @Test
     void foldsOutOfPackageAndAnnotatesOnlyVisibleNodes() throws Exception {
         AnnotationPipeline pipeline = new AnnotationPipeline(
                 new PackageFolder(List.of("com.example"), 10),
