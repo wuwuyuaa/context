@@ -22,6 +22,8 @@ class PromptBuilderTest {
         assertTrue(prompt.contains("side_effects"));
         assertTrue(prompt.contains("evidence"));
         assertTrue(prompt.contains("dig_worthy"));
+        assertTrue(prompt.contains("inputs"));
+        assertTrue(prompt.contains("outputs"));
     }
 
     @Test
@@ -31,5 +33,6 @@ class PromptBuilderTest {
 
         assertTrue(prompt.contains("A#a()"));
         assertTrue(prompt.contains("源码不可用"), "无源码时应说明");
+        assertTrue(prompt.contains("(无)"), "无被调方法时应渲染 (无)");
     }
 }
