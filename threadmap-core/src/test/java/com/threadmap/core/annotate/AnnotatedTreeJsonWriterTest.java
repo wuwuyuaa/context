@@ -30,6 +30,7 @@ class AnnotatedTreeJsonWriterTest {
         JsonNode parsed = new ObjectMapper().readTree(json);
 
         assertEquals("A#a()", parsed.get("entry_signature").asText());
+        assertEquals("2026-06-17T00:00:00Z", parsed.get("captured_at").asText());
         JsonNode r = parsed.get("root");
         assertEquals(5, r.get("line").asInt());
         assertEquals(70, r.get("self_ms").asInt());
@@ -47,5 +48,21 @@ class AnnotatedTreeJsonWriterTest {
         assertEquals("unknown", c.get("understanding").asText());
         assertFalse(c.has("summary"), "折叠/未标注节点不应有 summary");
         assertFalse(c.has("dig_worthy"));
+    }
+
+    @Test
+    void omitsDigReasonWhenNull() throws Exception {
+        AnnotatedNode root = new AnnotatedNode(0, "A#a()", "A.java", 0, 1);
+        root.setAnnotation(new Annotation(
+                "s", "i", "o", List.of(),
+                new Evidence("A.java", "", List.of()),
+                false, null)); // digReason null
+
+        String json = new AnnotatedTreeJsonWriter().toJson(new AnnotatedTree("A#a()", "t", root));
+        JsonNode r = new ObjectMapper().readTree(json).get("root");
+
+        assertTrue(r.has("summary"));
+        assertTrue(r.has("dig_worthy"));
+        assertFalse(r.has("dig_reason"), "digReason null 时应省略 dig_reason");
     }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.Locale;
 
 /** 把 AnnotatedTree 序列化成 annotated-tree.json(显式 snake_case 字段)。 */
 public class AnnotatedTreeJsonWriter {
@@ -29,7 +30,7 @@ public class AnnotatedTreeJsonWriter {
         o.put("line", n.getLine());
         o.put("self_ms", n.getSelfMs());
         o.put("collapsed", n.isCollapsed());
-        o.put("understanding", n.getUnderstanding().name().toLowerCase());
+        o.put("understanding", n.getUnderstanding().name().toLowerCase(Locale.ROOT));
 
         Annotation a = n.getAnnotation();
         if (a != null) {
