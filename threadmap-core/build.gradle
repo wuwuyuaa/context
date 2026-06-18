@@ -33,3 +33,12 @@ dependencies {
 }
 
 test { useJUnitPlatform() }
+
+// 端到端跑 CLI: ./gradlew :threadmap-core:runCli --args="<trace.json> <out.json> <includePackage> [sourceRoot...]"
+// 无 DASHSCOPE_API_KEY 时离线降级 FakeAnnotator;设了则走真实 qwen3.6-flash。
+tasks.register('runCli', JavaExec) {
+    group = 'application'
+    description = 'Run ThreadmapCli: <trace.json> <out.json> <includePackage> [sourceRoot...]'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.threadmap.core.annotate.ThreadmapCli'
+}
