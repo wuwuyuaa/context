@@ -55,4 +55,29 @@ class MethodSourceExtractorTest {
         MethodSourceExtractor extractor = new MethodSourceExtractor(List.of(root));
         assertTrue(extractor.extract("garbage").isEmpty());
     }
+
+    @Test
+    void scopesToNestedClassNotEnclosing(@TempDir Path root) throws Exception {
+        Path dir = root.resolve("com/example");
+        Files.createDirectories(dir);
+        Files.writeString(dir.resolve("Outer.java"), """
+                package com.example;
+                class Outer {
+                    String run() { return outerHelper(); }
+                    String outerHelper() { return "outer"; }
+                    static class Inner {
+                        String run() { return innerHelper(); }
+                        String innerHelper() { return "inner"; }
+                    }
+                }
+                """);
+        MethodSourceExtractor extractor = new MethodSourceExtractor(List.of(root));
+
+        Optional<MethodSourceExtractor.Extracted> got =
+                extractor.extract("com.example.Outer$Inner#run()");
+
+        assertTrue(got.isPresent(), "应在 Outer.java 里定位到 Inner");
+        assertTrue(got.get().calleeNames().contains("innerHelper"), "应取 Inner.run 的被调");
+        assertFalse(got.get().calleeNames().contains("outerHelper"), "不应串到 Outer.run 的被调");
+    }
 }

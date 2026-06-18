@@ -3,6 +3,7 @@ package com.threadmap.core.annotate;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 
 import java.nio.file.Files;
@@ -39,7 +40,12 @@ public class MethodSourceExtractor {
         } catch (Exception e) {
             return Optional.empty();
         }
-        return cu.findAll(MethodDeclaration.class).stream()
+        // 先 scope 到目标(可能是嵌套)类型,再在其直接方法里按 名字+参数个数 匹配,
+        // 避免把 Outer$Inner#m() 串到外层 Outer 的同名方法。
+        return cu.findAll(TypeDeclaration.class).stream()
+                .map(t -> (TypeDeclaration<?>) t)
+                .filter(t -> t.getNameAsString().equals(sig.simpleType()))
+                .flatMap(t -> t.getMethods().stream())
                 .filter(m -> m.getNameAsString().equals(sig.method()))
                 .filter(m -> m.getParameters().size() == sig.arity())
                 .findFirst()
@@ -82,10 +88,18 @@ public class MethodSourceExtractor {
         String method = signature.substring(hash + 1, open);
         String params = signature.substring(open + 1, close).trim();
         int arity = params.isEmpty() ? 0 : params.split(",").length;
-        return new Parsed(fqcn, method, arity);
+        return new Parsed(fqcn, simpleTypeOf(fqcn), method, arity);
     }
 
-    private record Parsed(String fqcn, String method, int arity) {
+    /** FQCN 的最内层简单类名:com.example.Outer$Inner → Inner;com.example.Sample → Sample。 */
+    private static String simpleTypeOf(String fqcn) {
+        int lastDot = fqcn.lastIndexOf('.');
+        String afterPackage = lastDot >= 0 ? fqcn.substring(lastDot + 1) : fqcn;
+        int lastDollar = afterPackage.lastIndexOf('$');
+        return lastDollar >= 0 ? afterPackage.substring(lastDollar + 1) : afterPackage;
+    }
+
+    private record Parsed(String fqcn, String simpleType, String method, int arity) {
     }
 
     /** 抽取结果:方法源码 + 直接被调方法名(去重,保序)。 */
