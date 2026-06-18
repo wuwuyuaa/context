@@ -1,2 +1,3 @@
 rootProject.name = 'threadmap'
 include ':threadmap-core'
+include ':threadmap-intellij'

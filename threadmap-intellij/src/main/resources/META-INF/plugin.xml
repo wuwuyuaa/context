@@ -1,0 +1,14 @@
+<idea-plugin>
+    <id>com.threadmap.intellij</id>
+    <name>脉络 Threadmap</name>
+    <vendor>threadmap</vendor>
+    <description>渲染 threadmap 引擎产出的 annotated-tree.json:列式调用树 + 标注 + 接管进度。</description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="脉络 (Threadmap)" anchor="right" secondary="false"
+                    factoryClass="com.threadmap.intellij.ui.ThreadmapToolWindowFactory"/>
+    </extensions>
+</idea-plugin>
