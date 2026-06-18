@@ -26,6 +26,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.4")
     intellijPlatform {
         intellijIdeaCommunity("2024.2")
+        bundledPlugin("com.intellij.java")
     }
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
 }
