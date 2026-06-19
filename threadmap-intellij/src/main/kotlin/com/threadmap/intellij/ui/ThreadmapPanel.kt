@@ -32,6 +32,8 @@ import com.threadmap.intellij.model.UnderstandingFilter
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
@@ -66,6 +68,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
     private var currentTree: AnnotatedTree? = null
     private var currentTable: TreeTableView? = null
     private var currentRoot: DefaultMutableTreeNode? = null
+    private var currentSplitter: OnePixelSplitter? = null
     private var selectedSignature: String? = null
     private var suppressFilterEvents = false
 
@@ -73,7 +76,20 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         setContent(emptyState("加载 annotated-tree.json 后查看真实调用链路"))
         setToolbar(buildToolbar())
         wireFilters()
+        addComponentListener(object : ComponentAdapter() {
+            override fun componentResized(e: ComponentEvent) = applyResponsiveLayout()
+        })
         loadDefault()
+    }
+
+    /** 宽时左右排(树左详情右)、窄时上下排(树上详情下),随工具窗宽度自适应。 */
+    private fun applyResponsiveLayout() {
+        val splitter = currentSplitter ?: return
+        val w = width
+        if (w <= 0) return
+        val narrow = w < JBUI.scale(720)
+        splitter.orientation = narrow
+        splitter.proportion = if (narrow) 0.55f else 0.68f
     }
 
     private fun buildToolbar(): JPanel {
@@ -212,8 +228,9 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         tabs.addTab("详情", detail)
         tabs.addTab("待查清单 (${todoItems.size})", todoPanel)
 
-        // 树区占比偏大,保证停靠时 4 列(含副作用)默认可见;详情面板文本会自动换行
+        // 初值给左右排;实际朝向由 applyResponsiveLayout 按工具窗宽度切换(宽=左右,窄=上下)
         val splitter = OnePixelSplitter(false, 0.68f)
+        currentSplitter = splitter
         if (rootNode == null) {
             currentTable = null
             currentRoot = null
@@ -221,6 +238,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             splitter.firstComponent = filteredEmptyState()
             splitter.secondComponent = tabs
             setContent(splitter)
+            applyResponsiveLayout()
             return
         }
 
@@ -236,6 +254,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         }
         splitter.secondComponent = tabs
         setContent(splitter)
+        applyResponsiveLayout()
 
         val rootPath = TreePath(rootNode.path)
         table.tree.expandPath(rootPath)

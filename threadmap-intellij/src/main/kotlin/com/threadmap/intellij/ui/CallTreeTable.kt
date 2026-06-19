@@ -7,12 +7,19 @@ import com.intellij.ui.dualView.TreeTableView
 import com.intellij.ui.treeStructure.treetable.ListTreeTableModelOnColumns
 import com.intellij.ui.treeStructure.treetable.TreeTableModel
 import com.intellij.util.ui.ColumnInfo
+import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.threadmap.intellij.model.NodePresentation
 import com.threadmap.intellij.model.StatusStyle
 import com.threadmap.core.annotate.AnnotatedNode
 import java.awt.Color
+import java.awt.Component
+import java.awt.FlowLayout
+import javax.swing.BorderFactory
+import javax.swing.JLabel
+import javax.swing.JPanel
 import javax.swing.JTable
+import javax.swing.table.TableCellRenderer
 import javax.swing.tree.DefaultMutableTreeNode
 
 private fun annotatedOf(value: Any?): AnnotatedNode? =
@@ -68,12 +75,13 @@ fun buildTreeTable(root: DefaultMutableTreeNode): TreeTableView {
     table.columnModel.getColumn(2).preferredWidth = JBUI.scale(76)
     table.columnModel.getColumn(2).minWidth = JBUI.scale(66)
     table.columnModel.getColumn(2).maxWidth = JBUI.scale(92)
-    table.columnModel.getColumn(3).preferredWidth = JBUI.scale(84)
-    table.columnModel.getColumn(3).minWidth = JBUI.scale(56)
-    table.columnModel.getColumn(3).maxWidth = JBUI.scale(110)
+    // 副作用列要容纳带边框的药丸徽章，比纯文本宽一些
+    table.columnModel.getColumn(3).preferredWidth = JBUI.scale(112)
+    table.columnModel.getColumn(3).minWidth = JBUI.scale(64)
+    table.columnModel.getColumn(3).maxWidth = JBUI.scale(140)
     table.columnModel.getColumn(1).cellRenderer = MutedTextRenderer()
     table.columnModel.getColumn(2).cellRenderer = StatusTextRenderer()
-    table.columnModel.getColumn(3).cellRenderer = SideEffectTextRenderer()
+    table.columnModel.getColumn(3).cellRenderer = SideEffectPillRenderer()
     return table
 }
 
@@ -118,24 +126,50 @@ private class StatusTextRenderer : ColoredTableCellRenderer() {
     }
 }
 
-private class SideEffectTextRenderer : ColoredTableCellRenderer() {
-    override fun customizeCellRenderer(
+/** 副作用类型 → 配色;树徽章与详情面板共用,保证视觉一致。 */
+object SideEffectStyle {
+    fun background(tag: String): Color = when {
+        tag.contains("DB", true) || tag.contains("表") -> JBColor(Color(0xFDEBEC), Color(0x4A292B))
+        tag.contains("API", true) || tag.contains("外部") -> JBColor(Color(0xE8F1FC), Color(0x23384F))
+        tag.contains("消息") || tag.contains("MQ", true) -> JBColor(Color(0xF5EDFF), Color(0x392B49))
+        else -> JBColor(Color(0xEEF0F3), Color(0x34363A))
+    }
+
+    fun border(tag: String): Color = when {
+        tag.contains("DB", true) || tag.contains("表") -> JBColor(Color(0xE4A2A6), Color(0x7C4448))
+        tag.contains("API", true) || tag.contains("外部") -> JBColor(Color(0x9ABCE2), Color(0x41658B))
+        tag.contains("消息") || tag.contains("MQ", true) -> JBColor(Color(0xC4A4E8), Color(0x684E83))
+        else -> JBColor.border()
+    }
+}
+
+/** 副作用列:每个副作用渲染成带边框的小药丸,与详情面板一致。 */
+private class SideEffectPillRenderer : TableCellRenderer {
+    override fun getTableCellRendererComponent(
         table: JTable,
         value: Any?,
         selected: Boolean,
-        hasFocus: Boolean,
+        focus: Boolean,
         row: Int,
         column: Int
-    ) {
+    ): Component {
+        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), JBUI.scale(3)))
+        panel.background = if (selected) table.selectionBackground else table.background
         val text = value?.toString().orEmpty()
-        toolTipText = text.takeIf { it.isNotBlank() }
-        val color = when {
-            text.contains("DB", true) || text.contains("表") -> JBColor(Color(0xB3261E), Color(0xF07167))
-            text.contains("API", true) || text.contains("外部") -> JBColor(Color(0x245EA8), Color(0x78A9E6))
-            text.contains("消息") || text.contains("MQ", true) -> JBColor(Color(0x7955A6), Color(0xC39BE8))
-            else -> JBColor.GRAY
+        if (text.isNotBlank()) {
+            panel.toolTipText = text
+            text.split(", ").filter { it.isNotBlank() }.forEach { tag ->
+                panel.add(JLabel(tag).apply {
+                    isOpaque = true
+                    background = SideEffectStyle.background(tag)
+                    font = JBFont.small()
+                    border = BorderFactory.createCompoundBorder(
+                        JBUI.Borders.customLine(SideEffectStyle.border(tag), 1),
+                        JBUI.Borders.empty(1, 6)
+                    )
+                })
+            }
         }
-        append(text, if (selected) SimpleTextAttributes.REGULAR_ATTRIBUTES
-        else SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, color))
+        return panel
     }
 }

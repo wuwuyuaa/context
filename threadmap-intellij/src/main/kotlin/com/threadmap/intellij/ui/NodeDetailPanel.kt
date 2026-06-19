@@ -298,19 +298,9 @@ class NodeDetailPanel : JPanel(BorderLayout()) {
         if (node.line > 0) "${node.file.substringAfterLast('/')}:${node.line}  ↗"
         else "${node.file.substringAfterLast('/')}  ↗"
 
-    private fun sideEffectColor(value: String): Color = when {
-        value.contains("DB", true) || value.contains("表") -> JBColor(Color(0xFDEBEC), Color(0x4A292B))
-        value.contains("API", true) || value.contains("外部") -> JBColor(Color(0xE8F1FC), Color(0x23384F))
-        value.contains("消息") || value.contains("MQ", true) -> JBColor(Color(0xF5EDFF), Color(0x392B49))
-        else -> JBColor(Color(0xEEF0F3), Color(0x34363A))
-    }
+    private fun sideEffectColor(value: String): Color = SideEffectStyle.background(value)
 
-    private fun sideEffectBorder(value: String): Color = when {
-        value.contains("DB", true) || value.contains("表") -> JBColor(Color(0xE4A2A6), Color(0x7C4448))
-        value.contains("API", true) || value.contains("外部") -> JBColor(Color(0x9ABCE2), Color(0x41658B))
-        value.contains("消息") || value.contains("MQ", true) -> JBColor(Color(0xC4A4E8), Color(0x684E83))
-        else -> JBColor.border()
-    }
+    private fun sideEffectBorder(value: String): Color = SideEffectStyle.border(value)
 
     private fun refresh() {
         body.revalidate()
