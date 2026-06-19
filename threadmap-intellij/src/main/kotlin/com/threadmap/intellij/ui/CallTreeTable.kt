@@ -59,11 +59,11 @@ fun buildTreeTable(root: DefaultMutableTreeNode): TreeTableView {
     table.autoResizeMode = JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS
     table.setTreeCellRenderer(StatusStripeRenderer())
     // 签名列(树列)要容纳缩进+等宽签名+★，给足宽度避免把 check 截成 checl
-    table.columnModel.getColumn(0).preferredWidth = JBUI.scale(320)
-    table.columnModel.getColumn(0).minWidth = JBUI.scale(260)
-    // 摘要列不设上限：作为弹性列吃掉多余宽度
-    table.columnModel.getColumn(1).preferredWidth = JBUI.scale(300)
-    table.columnModel.getColumn(1).minWidth = JBUI.scale(160)
+    table.columnModel.getColumn(0).preferredWidth = JBUI.scale(300)
+    table.columnModel.getColumn(0).minWidth = JBUI.scale(230)
+    // 摘要列不设上限：作为弹性列吃掉多余宽度；窄停靠时收得最狠，把空间让给签名+副作用
+    table.columnModel.getColumn(1).preferredWidth = JBUI.scale(240)
+    table.columnModel.getColumn(1).minWidth = JBUI.scale(110)
     // 状态/副作用是定长标签，收窄并封顶，多余空间让给摘要
     table.columnModel.getColumn(2).preferredWidth = JBUI.scale(76)
     table.columnModel.getColumn(2).minWidth = JBUI.scale(66)

@@ -212,7 +212,8 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         tabs.addTab("详情", detail)
         tabs.addTab("待查清单 (${todoItems.size})", todoPanel)
 
-        val splitter = OnePixelSplitter(false, 0.61f)
+        // 树区占比偏大,保证停靠时 4 列(含副作用)默认可见;详情面板文本会自动换行
+        val splitter = OnePixelSplitter(false, 0.68f)
         if (rootNode == null) {
             currentTable = null
             currentRoot = null
