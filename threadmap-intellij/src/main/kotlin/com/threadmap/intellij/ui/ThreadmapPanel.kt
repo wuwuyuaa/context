@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
@@ -14,6 +15,7 @@ import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
@@ -24,12 +26,15 @@ import com.intellij.util.ui.UIUtil
 import com.threadmap.core.annotate.AnnotatedNode
 import com.threadmap.core.annotate.AnnotatedTree
 import com.threadmap.core.annotate.AnnotatedTreeJsonReader
+import com.threadmap.intellij.model.CallGraph
+import com.threadmap.intellij.model.CallGraphBuilder
 import com.threadmap.intellij.model.CallTreeNodeBuilder
 import com.threadmap.intellij.model.ProgressStore
 import com.threadmap.intellij.model.TodoExporter
 import com.threadmap.intellij.model.TreeFilter
 import com.threadmap.intellij.model.UnderstandingFilter
 import java.awt.BorderLayout
+import java.awt.CardLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.ComponentAdapter
@@ -71,6 +76,14 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
     private var currentSplitter: OnePixelSplitter? = null
     private var selectedSignature: String? = null
     private var suppressFilterEvents = false
+    private var currentGraph: CallGraph? = null
+    private var graphMode = false
+    private val leftCards = JPanel(CardLayout())
+    private val graphPanel: GraphPanel? =
+        if (JBCefApp.isSupported()) GraphPanel(project).also { gp ->
+            gp.onSelect = { sig -> selectBySignature(sig) }
+            gp.onOpen = { sig -> openBySignature(sig) }
+        } else null
 
     init {
         setContent(emptyState("加载 annotated-tree.json 后查看真实调用链路"))
@@ -107,6 +120,13 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             add(toolbarAction("折叠", "折叠除入口外的所有节点", AllIcons.Actions.Collapseall) {
                 setAllExpanded(false)
             })
+            if (graphPanel != null) {
+                addSeparator()
+                add(object : ToggleAction("图视图", "在树与调用图之间切换", AllIcons.Actions.GroupBy) {
+                    override fun isSelected(e: AnActionEvent): Boolean = graphMode
+                    override fun setSelected(e: AnActionEvent, state: Boolean) { setGraphMode(state) }
+                })
+            }
         }
         val actions = ActionManager.getInstance()
             .createActionToolbar("ThreadmapToolbar", group, true).apply {
@@ -249,9 +269,14 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         wireNavigation(table)
         detail.showEmpty()
 
-        splitter.firstComponent = JBScrollPane(table).apply {
-            border = JBUI.Borders.empty()
-        }
+        val treeScroll = JBScrollPane(table).apply { border = JBUI.Borders.empty() }
+        leftCards.removeAll()
+        leftCards.add(treeScroll, "tree")
+        graphPanel?.let { leftCards.add(it, "graph") }
+        currentGraph = CallGraphBuilder.build(tree)
+        graphPanel?.takeIf { graphMode }?.render(currentGraph!!)
+        showLeftCard()
+        splitter.firstComponent = leftCards
         splitter.secondComponent = tabs
         setContent(splitter)
         applyResponsiveLayout()
@@ -265,6 +290,37 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             table.tree.selectionPath = rootPath
             table.tree.scrollPathToVisible(rootPath)
         }
+    }
+
+    private fun setGraphMode(on: Boolean) {
+        graphMode = on
+        if (on) currentGraph?.let { graphPanel?.render(it) }
+        showLeftCard()
+    }
+
+    private fun showLeftCard() {
+        (leftCards.layout as CardLayout).show(leftCards, if (graphMode && graphPanel != null) "graph" else "tree")
+    }
+
+    private fun selectBySignature(signature: String) {
+        val tree = currentTree ?: return
+        val node = findBySignature(tree.root, signature) ?: return
+        selectedSignature = signature
+        showNodeDetails(currentTable ?: return, tree, node)
+    }
+
+    private fun openBySignature(signature: String) {
+        val tree = currentTree ?: return
+        val node = findBySignature(tree.root, signature) ?: return
+        SourceNavigator.navigate(project, node)
+    }
+
+    private fun findBySignature(node: AnnotatedNode, signature: String): AnnotatedNode? {
+        if (node.signature == signature) return node
+        for (child in node.children) {
+            findBySignature(child, signature)?.let { return it }
+        }
+        return null
     }
 
     private fun revealSignature(tree: AnnotatedTree, signature: String) {
