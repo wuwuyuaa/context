@@ -19,12 +19,18 @@ object NodePresentation {
         return simple + sig.substring(hash)
     }
 
+    /** 树中使用的紧凑签名，参数详情留到右侧面板与 tooltip。 */
+    fun compactSignature(node: AnnotatedNode): String =
+        shortSignature(node).substringBefore('(')
+
     fun summary(node: AnnotatedNode): String = node.annotation?.summary() ?: "—"
 
     fun sideEffects(node: AnnotatedNode): String =
         node.annotation?.sideEffects()?.joinToString(", ") ?: ""
 
-    fun statusStyle(node: AnnotatedNode): StatusStyle = when (node.understanding) {
+    fun statusStyle(node: AnnotatedNode): StatusStyle = when (
+        node.understanding ?: Understanding.UNKNOWN
+    ) {
         Understanding.UNKNOWN -> StatusStyle.UNKNOWN
         Understanding.HALF -> StatusStyle.HALF
         Understanding.MASTERED -> StatusStyle.MASTERED

@@ -18,6 +18,7 @@ class NodePresentationTest {
     @Test
     fun shortSignatureDropsPackage() {
         assertEquals("Order#place(Cart, int)", NodePresentation.shortSignature(annotated()))
+        assertEquals("Order#place", NodePresentation.compactSignature(annotated()))
     }
 
     @Test

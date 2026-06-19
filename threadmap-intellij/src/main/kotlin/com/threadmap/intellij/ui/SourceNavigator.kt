@@ -1,11 +1,17 @@
 package com.threadmap.intellij.ui
 
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.SmartPointerManager
+import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.threadmap.core.annotate.AnnotatedNode
 import com.threadmap.intellij.model.SignatureParser
 
@@ -13,22 +19,31 @@ import com.threadmap.intellij.model.SignatureParser
 object SourceNavigator {
 
     fun navigate(project: Project, node: AnnotatedNode) {
-        if (navigateByPsi(project, node)) return
-        navigateByFileLine(project, node)
-    }
-
-    private fun navigateByPsi(project: Project, node: AnnotatedNode): Boolean {
-        val sig = SignatureParser.parse(node.signature) ?: return false
-        val method = ReadAction.compute<com.intellij.psi.PsiMethod?, RuntimeException> {
+        val sig = SignatureParser.parse(node.signature)
+        if (sig == null || DumbService.isDumb(project)) {
+            navigateByFileLine(project, node)
+            return
+        }
+        ReadAction.nonBlocking<SmartPsiElementPointer<PsiMethod>?> {
             val psiClass = JavaPsiFacade.getInstance(project)
-                .findClass(sig.fqcn.replace('$', '.'), GlobalSearchScope.allScope(project)) ?: return@compute null
-            psiClass.findMethodsByName(sig.methodName, false)
+                .findClass(sig.fqcn.replace('$', '.'), GlobalSearchScope.allScope(project))
+                ?: return@nonBlocking null
+            val method = psiClass.findMethodsByName(sig.methodName, false)
                 .firstOrNull { it.parameterList.parametersCount == sig.paramCount }
                 ?: psiClass.findMethodsByName(sig.methodName, false).firstOrNull()
-        } ?: return false
-        if (!method.canNavigate()) return false
-        method.navigate(true)
-        return true
+                ?: return@nonBlocking null
+            SmartPointerManager.createPointer(method)
+        }
+            .expireWith(project)
+            .finishOnUiThread(ModalityState.defaultModalityState()) { pointer ->
+                val method = pointer?.element
+                if (method != null && method.canNavigate()) {
+                    method.navigate(true)
+                } else {
+                    navigateByFileLine(project, node)
+                }
+            }
+            .submit(AppExecutorUtil.getAppExecutorService())
     }
 
     private fun navigateByFileLine(project: Project, node: AnnotatedNode) {
