@@ -27,8 +27,11 @@ dependencies {
     intellijPlatform {
         intellijIdeaCommunity("2024.2")
         bundledPlugin("com.intellij.java")
+        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
+        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Plugin.Java)
     }
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("org.junit.vintage:junit-vintage-engine:5.10.2")
 }
 
 kotlin {
