@@ -65,6 +65,23 @@
     cy.on('dbltap', 'node', function (evt) {
       if (window.threadmapOpen) window.threadmapOpen(evt.target.id());
     });
+
+    setupZoom(cy);
+  }
+
+  // JCEF 不把滚轮/触控板捏合喂给 Cytoscape,所以提供可点的缩放控件作为可靠入口。
+  function setupZoom(cy) {
+    function zoomBy(factor) {
+      var c = cy.container();
+      var center = { x: c.clientWidth / 2, y: c.clientHeight / 2 };
+      cy.zoom({ level: cy.zoom() * factor, renderedPosition: center });
+    }
+    var zin = document.getElementById('zoom-in');
+    var zout = document.getElementById('zoom-out');
+    var zfit = document.getElementById('zoom-fit');
+    if (zin) zin.onclick = function () { zoomBy(1.3); };
+    if (zout) zout.onclick = function () { zoomBy(1 / 1.3); };
+    if (zfit) zfit.onclick = function () { cy.fit(cy.elements(), 40); };
   }
 
   if (window.__GRAPH__) render(window.__GRAPH__);

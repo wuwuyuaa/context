@@ -62,8 +62,17 @@ class GraphPanel(parent: Disposable) : JPanel(BorderLayout()) {
             .pill{display:inline-block;font-size:10px;padding:0 5px;margin-right:3px;border-radius:3px;
                   background:#3a2c2e;border:1px solid #7c4448;color:#dfe1e5;}
             .star{color:#e5b454;}
+            #zoom{position:fixed;right:12px;bottom:12px;display:flex;flex-direction:column;gap:4px;z-index:10;}
+            #zoom button{width:30px;height:30px;font-size:16px;line-height:1;color:#dfe1e5;
+                  background:#2b2d30;border:1px solid #43454a;border-radius:6px;cursor:pointer;}
+            #zoom button:hover{background:#383b40;border-color:#5a5d63;}
             </style></head><body>
             <div id="cy"></div>
+            <div id="zoom">
+              <button id="zoom-in" title="放大">+</button>
+              <button id="zoom-out" title="缩小">−</button>
+              <button id="zoom-fit" title="适应窗口">⊡</button>
+            </div>
             <script>$cytoscape</script>
             <script>$dagre</script>
             <script>$cytoscapeDagre</script>
