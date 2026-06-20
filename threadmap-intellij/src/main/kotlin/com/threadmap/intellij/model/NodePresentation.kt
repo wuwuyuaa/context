@@ -38,4 +38,20 @@ object NodePresentation {
     }
 
     fun isDigWorthy(node: AnnotatedNode): Boolean = node.annotation?.digWorthy() ?: false
+
+    /** 仅凭被调类名后缀推断的"结构性副作用边界"(无需 LLM):仓储 / 外部 / 消息生产者。 */
+    fun structuralSideEffect(node: AnnotatedNode): String? {
+        val sig = node.signature
+        val hash = sig.indexOf('#')
+        val cls = (if (hash < 0) sig else sig.substring(0, hash)).substringAfterLast('.')
+        return when {
+            cls.endsWith("Repository") || cls.endsWith("Dao") -> "DB写"
+            cls.endsWith("Port") || cls.endsWith("Client") || cls.endsWith("Gateway") || cls.endsWith("Feign") -> "外部API"
+            cls.endsWith("Producer") || cls.endsWith("Publisher") || cls.endsWith("Sender") -> "消息"
+            else -> null
+        }
+    }
+
+    /** 主干里程碑 = 结构上产生副作用的边界节点(落库 / 调外部 / 发消息)。 */
+    fun isMilestone(node: AnnotatedNode): Boolean = structuralSideEffect(node) != null
 }

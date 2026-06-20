@@ -18,14 +18,16 @@ enum class UnderstandingFilter(val label: String, private val state: Understandi
 data class TreeFilter(
     val understanding: UnderstandingFilter = UnderstandingFilter.ALL,
     val todoOnly: Boolean = false,
+    val spineOnly: Boolean = false,
     val query: String = ""
 ) {
     fun isEmpty(): Boolean =
-        understanding == UnderstandingFilter.ALL && !todoOnly && query.isBlank()
+        understanding == UnderstandingFilter.ALL && !todoOnly && !spineOnly && query.isBlank()
 
     fun matches(node: AnnotatedNode): Boolean {
         if (!understanding.matches(node)) return false
         if (todoOnly && node.annotation?.digWorthy() != true) return false
+        if (spineOnly && !NodePresentation.isMilestone(node)) return false
         val normalized = query.trim().lowercase(Locale.ROOT)
         if (normalized.isEmpty()) return true
         return node.signature.lowercase(Locale.ROOT).contains(normalized) ||

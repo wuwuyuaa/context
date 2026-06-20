@@ -41,4 +41,15 @@ class NodePresentationTest {
         assertTrue(NodePresentation.isDigWorthy(annotated()))
         assertFalse(NodePresentation.isDigWorthy(AnnotatedNode(0, "A#a()", "x", 0, 1)))
     }
+
+    @Test
+    fun structuralSideEffectFromClassName() {
+        fun n(sig: String) = AnnotatedNode(0, sig, "x", 0, 1)
+        assertEquals("DB写", NodePresentation.structuralSideEffect(n("a.b.OrderRepository#save(O)")))
+        assertEquals("外部API", NodePresentation.structuralSideEffect(n("a.b.SellerCenterPort#fetch(S)")))
+        assertEquals("消息", NodePresentation.structuralSideEffect(n("a.b.EventPublisher#publish(E)")))
+        assertNull(NodePresentation.structuralSideEffect(n("a.b.OrderService#place(C)")))
+        assertTrue(NodePresentation.isMilestone(n("a.b.UserDao#insert(U)")))
+        assertFalse(NodePresentation.isMilestone(n("a.b.PriceCalculator#calc()")))
+    }
 }

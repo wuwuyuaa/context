@@ -50,8 +50,12 @@ class StatusColumn : ColumnInfo<DefaultMutableTreeNode, String>("状态") {
 }
 
 class SideEffectColumn : ColumnInfo<DefaultMutableTreeNode, String>("副作用") {
-    override fun valueOf(item: DefaultMutableTreeNode): String =
-        annotatedOf(item)?.let { NodePresentation.sideEffects(it) } ?: ""
+    override fun valueOf(item: DefaultMutableTreeNode): String {
+        val n = annotatedOf(item) ?: return ""
+        val annotated = NodePresentation.sideEffects(n)
+        // 未标注时退回结构推断,让仓储/外部/消息这些主干里程碑也能亮起来
+        return if (annotated.isNotBlank()) annotated else NodePresentation.structuralSideEffect(n) ?: ""
+    }
 }
 
 fun buildTreeTable(root: DefaultMutableTreeNode): TreeTableView {
