@@ -36,6 +36,16 @@ import com.threadmap.intellij.model.ProgressStore
 import com.threadmap.intellij.model.TodoExporter
 import com.threadmap.intellij.model.TreeFilter
 import com.threadmap.intellij.model.UnderstandingFilter
+import com.threadmap.intellij.psi.EntryPoint
+import com.threadmap.intellij.psi.EntryPointScanner
+import com.threadmap.intellij.psi.StaticChain
+import com.intellij.openapi.application.ReadAction
+import com.intellij.psi.PsiMethod
+import com.intellij.ui.ColoredListCellRenderer
+import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.components.JBList
+import com.threadmap.core.trace.TraceNode
+import javax.swing.JList
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Dimension
@@ -111,6 +121,59 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         currentTable?.let { applyTreeColumnLayout(it, narrow) }
     }
 
+    /** 入口清单(正门):列出项目的 HTTP 端点,点一个走现有静态链路渲染进同一工具窗。右键是另一道门。 */
+    private fun showEntryList() {
+        val entries = ReadAction.compute<List<EntryPoint>, RuntimeException> {
+            EntryPointScanner.scan(project)
+        }
+        if (entries.isEmpty()) {
+            setContent(emptyState("没扫到 HTTP 入口(@RestController / @RequestMapping)。也可以直接在方法上右键「看这条链」。"))
+            return
+        }
+        val list = JBList(entries).apply {
+            cellRenderer = EntryPointRenderer()
+            selectedIndex = 0
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent) {
+                    if (e.clickCount == 2) selectedValue?.let { renderChainFrom(it.method) }
+                }
+            })
+            addKeyListener(object : KeyAdapter() {
+                override fun keyPressed(e: KeyEvent) {
+                    if (e.keyCode == KeyEvent.VK_ENTER) selectedValue?.let { renderChainFrom(it.method) }
+                }
+            })
+        }
+        val header = JBLabel("选一个入口看它的链路(双击 / 回车)— 共 ${entries.size} 个").apply {
+            border = JBUI.Borders.empty(8, 10)
+        }
+        setContent(JPanel(BorderLayout()).apply {
+            add(header, BorderLayout.NORTH)
+            add(JBScrollPane(list).apply { border = JBUI.Borders.empty() }, BorderLayout.CENTER)
+        })
+    }
+
+    private fun renderChainFrom(method: PsiMethod) {
+        val root = ReadAction.compute<TraceNode, RuntimeException> { StaticChain.walk(method) }
+        StaticChain.writeStaticTrace(project, root)
+        renderStaticTree(StaticChain.toAnnotatedTree(root))
+    }
+
+    private class EntryPointRenderer : ColoredListCellRenderer<EntryPoint>() {
+        override fun customizeCellRenderer(
+            list: JList<out EntryPoint>,
+            value: EntryPoint,
+            index: Int,
+            selected: Boolean,
+            hasFocus: Boolean,
+        ) {
+            append(value.verb + "  ", SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
+            append(value.path, SimpleTextAttributes.REGULAR_ATTRIBUTES)
+            append("     " + value.signature, SimpleTextAttributes.GRAYED_ATTRIBUTES)
+            border = JBUI.Borders.empty(3, 10)
+        }
+    }
+
     private fun buildToolbar(): JPanel {
         val group = DefaultActionGroup().apply {
             add(toolbarAction("加载", "选择 annotated-tree.json 加载", AllIcons.Actions.MenuOpen) {
@@ -125,6 +188,10 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             })
             add(toolbarAction("折叠", "折叠除入口外的所有节点", AllIcons.Actions.Collapseall) {
                 setAllExpanded(false)
+            })
+            addSeparator()
+            add(toolbarAction("入口", "列出项目的 HTTP 入口,点一个看它的链路", AllIcons.Actions.ListFiles) {
+                showEntryList()
             })
             if (graphPanel != null) {
                 addSeparator()
