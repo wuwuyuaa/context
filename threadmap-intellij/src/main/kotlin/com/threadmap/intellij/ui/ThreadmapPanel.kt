@@ -126,17 +126,17 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
 
     /** 入口清单(正门):列出项目的 HTTP 端点,点一个走现有静态链路渲染进同一工具窗。右键是另一道门。 */
     private fun showEntryList() {
-        if (com.intellij.openapi.project.DumbService.getInstance(project).isDumb) {
-            setContent(emptyState("索引完成后点「入口」查看 HTTP 入口清单;也可以直接在方法上右键「看这条链」。"))
-            return
-        }
-        val all = ReadAction.compute<List<EntryPoint>, RuntimeException> {
-            try {
-                EntryPointScanner.scan(project)
-            } catch (e: com.intellij.openapi.project.IndexNotReadyException) {
-                emptyList()
+        setContent(emptyState("正在扫描 HTTP 入口…"))
+        // 索引搜索是慢操作,放后台读 action;inSmartMode 自动等索引建完(替代之前的 dumb 兜底)。
+        ReadAction.nonBlocking(java.util.concurrent.Callable { EntryPointScanner.scan(project) })
+            .inSmartMode(project)
+            .finishOnUiThread(com.intellij.openapi.application.ModalityState.defaultModalityState()) { all ->
+                renderEntryList(all)
             }
-        }
+            .submit(com.intellij.util.concurrency.AppExecutorUtil.getAppExecutorService())
+    }
+
+    private fun renderEntryList(all: List<EntryPoint>) {
         if (all.isEmpty()) {
             setContent(emptyState("没扫到 HTTP 入口(@RestController / @RequestMapping)。也可以直接在方法上右键「看这条链」。"))
             return
@@ -180,9 +180,17 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
     }
 
     private fun renderChainFrom(method: PsiMethod) {
-        val root = ReadAction.compute<TraceNode, RuntimeException> { StaticChain.walk(method) }
-        StaticChain.writeStaticTrace(project, root)
-        renderStaticTree(StaticChain.toAnnotatedTree(root))
+        setContent(emptyState("正在走链…"))
+        // PSI 走链 + 接口解析是慢操作,放后台读 action,算完回 EDT 渲染。
+        ReadAction.nonBlocking(java.util.concurrent.Callable {
+            val root = StaticChain.walk(method)
+            StaticChain.writeStaticTrace(project, root)
+            StaticChain.toAnnotatedTree(root)
+        }).inSmartMode(project)
+            .finishOnUiThread(com.intellij.openapi.application.ModalityState.defaultModalityState()) { tree ->
+                renderStaticTree(tree)
+            }
+            .submit(com.intellij.util.concurrency.AppExecutorUtil.getAppExecutorService())
     }
 
     private class EntryPointRenderer : ColoredListCellRenderer<EntryPoint>() {
