@@ -38,12 +38,13 @@ object EntryPointScanner {
 
     /** 必须在 ReadAction 内调用(访问 PSI / 索引搜索)。 */
     fun scan(project: Project): List<EntryPoint> {
-        val scope = GlobalSearchScope.projectScope(project)
+        val projectScope = GlobalSearchScope.projectScope(project)
         val facade = JavaPsiFacade.getInstance(project)
         val out = LinkedHashMap<String, EntryPoint>()
         for (ctrlFqn in CONTROLLERS) {
-            val anno = facade.findClass(ctrlFqn, scope) ?: continue
-            for (cls in AnnotatedElementsSearch.searchPsiClasses(anno, scope).findAll()) {
+            // 注解类住在 Spring 库里,用 allScope 才找得到;但只在项目源码(projectScope)里搜被注解的控制器。
+            val anno = facade.findClass(ctrlFqn, GlobalSearchScope.allScope(project)) ?: continue
+            for (cls in AnnotatedElementsSearch.searchPsiClasses(anno, projectScope).findAll()) {
                 val basePath = classPath(cls)
                 for (m in cls.methods) {
                     val mapping = methodMapping(m) ?: continue

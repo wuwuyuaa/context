@@ -123,16 +123,15 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
 
     /** 入口清单(正门):列出项目的 HTTP 端点,点一个走现有静态链路渲染进同一工具窗。右键是另一道门。 */
     private fun showEntryList() {
-        val entries = ReadAction.compute<List<EntryPoint>, RuntimeException> {
+        val all = ReadAction.compute<List<EntryPoint>, RuntimeException> {
             EntryPointScanner.scan(project)
         }
-        if (entries.isEmpty()) {
+        if (all.isEmpty()) {
             setContent(emptyState("没扫到 HTTP 入口(@RestController / @RequestMapping)。也可以直接在方法上右键「看这条链」。"))
             return
         }
-        val list = JBList(entries).apply {
+        val list = JBList<EntryPoint>().apply {
             cellRenderer = EntryPointRenderer()
-            selectedIndex = 0
             addMouseListener(object : MouseAdapter() {
                 override fun mouseClicked(e: MouseEvent) {
                     if (e.clickCount == 2) selectedValue?.let { renderChainFrom(it.method) }
@@ -144,8 +143,24 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
                 }
             })
         }
-        val header = JBLabel("选一个入口看它的链路(双击 / 回车)— 共 ${entries.size} 个").apply {
+        fun applyEntryFilter(query: String) {
+            val q = query.trim().lowercase()
+            val items = if (q.isEmpty()) all
+                else all.filter { "${it.verb} ${it.path} ${it.signature}".lowercase().contains(q) }
+            list.setListData(items.toTypedArray())
+            if (items.isNotEmpty()) list.selectedIndex = 0
+        }
+        val search = SearchTextField(false).apply {
+            textEditor.emptyText.text = "过滤端点(路径 / Controller / 动词)"
+            addDocumentListener(object : DocumentAdapter() {
+                override fun textChanged(e: DocumentEvent) = applyEntryFilter(text)
+            })
+        }
+        applyEntryFilter("")
+        val header = JPanel(BorderLayout(0, JBUI.scale(4))).apply {
             border = JBUI.Borders.empty(8, 10)
+            add(JBLabel("选一个入口看它的链路(双击 / 回车)— 共 ${all.size} 个"), BorderLayout.NORTH)
+            add(search, BorderLayout.CENTER)
         }
         setContent(JPanel(BorderLayout()).apply {
             add(header, BorderLayout.NORTH)
@@ -167,7 +182,14 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             selected: Boolean,
             hasFocus: Boolean,
         ) {
-            append(value.verb + "  ", SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
+            val verbColor = when (value.verb) {
+                "GET" -> JBColor(0x2E7D32, 0x6FBF73)
+                "POST" -> JBColor(0xA66A00, 0xE5B454)
+                "PUT", "PATCH" -> JBColor(0x1565C0, 0x6FA8DC)
+                "DELETE" -> JBColor(0xB3261E, 0xF07167)
+                else -> JBColor.GRAY
+            }
+            append(value.verb.padEnd(7), SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, verbColor))
             append(value.path, SimpleTextAttributes.REGULAR_ATTRIBUTES)
             append("     " + value.signature, SimpleTextAttributes.GRAYED_ATTRIBUTES)
             border = JBUI.Borders.empty(3, 10)
