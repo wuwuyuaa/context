@@ -2,6 +2,7 @@ package com.threadmap.intellij.ui
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -14,6 +15,8 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.DocumentAdapter
+import com.intellij.ui.HyperlinkLabel
+import com.intellij.ui.JBColor
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.SearchTextField
@@ -46,6 +49,7 @@ import java.awt.event.MouseEvent
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.Icon
+import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JMenuItem
 import javax.swing.JPanel
@@ -86,7 +90,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         } else null
 
     init {
-        setContent(emptyState("加载 annotated-tree.json 后查看真实调用链路"))
+        setContent(emptyState(""))
         setToolbar(buildToolbar())
         wireFilters()
         addComponentListener(object : ComponentAdapter() {
@@ -97,12 +101,14 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
 
     /** 宽时左右排(树左详情右)、窄时上下排(树上详情下),随工具窗宽度自适应。 */
     private fun applyResponsiveLayout() {
-        val splitter = currentSplitter ?: return
         val w = width
         if (w <= 0) return
         val narrow = w < JBUI.scale(720)
-        splitter.orientation = narrow
-        splitter.proportion = if (narrow) 0.55f else 0.68f
+        currentSplitter?.let {
+            it.orientation = narrow
+            it.proportion = if (narrow) 0.55f else 0.68f
+        }
+        currentTable?.let { applyTreeColumnLayout(it, narrow) }
     }
 
     private fun buildToolbar(): JPanel {
@@ -123,6 +129,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             if (graphPanel != null) {
                 addSeparator()
                 add(object : ToggleAction("图视图", "在树与调用图之间切换", AllIcons.Actions.GroupBy) {
+                    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
                     override fun isSelected(e: AnActionEvent): Boolean = graphMode
                     override fun setSelected(e: AnActionEvent, state: Boolean) { setGraphMode(state) }
                 })
@@ -179,10 +186,17 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
     )
 
     private fun emptyState(message: String): JPanel = JPanel(BorderLayout()).apply {
-        border = JBUI.Borders.empty(24)
+        border = JBUI.Borders.empty(28)
+        val status = if (message.isBlank()) ""
+            else "<span style='color:#8a8a8a'>$message</span><br><br>"
         add(JLabel(
-            "<html><div style='text-align:center'><b>$message</b><br><br>" +
-                "<span style='color:#8a8a8a'>默认路径：项目根/.threadmap/annotated-tree.json</span></div></html>",
+            "<html><div style='text-align:center'>" +
+                "<span style='font-size:15px'><b>看清一个方法到底调用了什么</b></span><br><br>" +
+                status +
+                "<span style='font-size:13px'>👉 在任意方法名上 <b>右键 →「看这条链」</b></span><br>" +
+                "<span style='color:#8a8a8a'>零配置,立刻画出它调用了哪些方法、哪些是数据库 / 外部接口</span><br><br>" +
+                "<span style='color:#6a6a6a;font-size:11px'>已经有 annotated-tree.json?点上面「加载」打开它</span>" +
+                "</div></html>",
             JLabel.CENTER
         ), BorderLayout.CENTER)
     }
@@ -192,6 +206,42 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         add(JBLabel("没有符合当前筛选条件的节点", JLabel.CENTER).apply {
             foreground = UIUtil.getContextHelpForeground()
         }, BorderLayout.CENTER)
+    }
+
+    /** 树里是否已有任意 AI 标注;静态结构(未标注)时用来决定是否提示补标注。 */
+    private fun hasAnnotations(tree: AnnotatedTree): Boolean {
+        fun any(n: AnnotatedNode): Boolean = n.annotation != null || n.children.any { any(it) }
+        return any(tree.root)
+    }
+
+    private fun wrapBanner(banner: JComponent?, body: JComponent): JComponent =
+        if (banner == null) body
+        else JPanel(BorderLayout()).apply {
+            add(banner, BorderLayout.NORTH)
+            add(body, BorderLayout.CENTER)
+        }
+
+    /** 静态结构就绪、但还没 AI 标注时,顶部挂一条「怎么补标注」提示条。 */
+    private fun buildAnnotateHint(): JComponent =
+        JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), JBUI.scale(5))).apply {
+            background = JBColor(0xE8F5E9, 0x2C3B2E)
+            border = JBUI.Borders.empty(2, 8)
+            add(JBLabel("✓ 结构已就绪 — 想要每步的 AI 摘要 / 风险标注?"))
+            add(HyperlinkLabel("怎么做").apply { addHyperlinkListener { showAnnotateHowTo() } })
+        }
+
+    private fun showAnnotateHowTo() {
+        val base = project.basePath ?: "<项目根>"
+        val cmd = "DASHSCOPE_API_KEY=<你的key> ./gradlew :threadmap-core:runCli \\\n" +
+            "  --args=\"$base/.threadmap/static-trace.json " +
+            "$base/.threadmap/annotated-tree.json <基础包> $base/<源码根>\""
+        Messages.showInfoMessage(
+            project,
+            "在引擎仓库执行(LLM 只在离线侧,不进插件):\n\n$cmd\n\n" +
+                "跑完回来点工具栏「刷新」,即带上 AI 摘要 / 风险 / 副作用。\n" +
+                "不设 DASHSCOPE_API_KEY 则用离线 FakeAnnotator(无需联网)。",
+            "给这条链补 AI 标注"
+        )
     }
 
     private fun chooseAndLoad() {
@@ -206,7 +256,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         if (Files.isRegularFile(path)) {
             render(path)
         } else {
-            setContent(emptyState("尚未找到调用树"))
+            setContent(emptyState(""))
         }
     }
 
@@ -246,6 +296,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
     private fun showTree(tree: AnnotatedTree, preferredSignature: String?) {
         val filter = activeFilter()
         val rootNode = CallTreeNodeBuilder.build(tree, filter)
+        val banner = if (hasAnnotations(tree)) null else buildAnnotateHint()
         val tabs = JTabbedPane()
         val todoItems = TodoExporter.collect(tree)
         val todoPanel = TodoPanel(
@@ -264,7 +315,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             detail.showEmpty()
             splitter.firstComponent = filteredEmptyState()
             splitter.secondComponent = tabs
-            setContent(splitter)
+            setContent(wrapBanner(banner, splitter))
             applyResponsiveLayout()
             return
         }
@@ -285,7 +336,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         showLeftCard()
         splitter.firstComponent = leftCards
         splitter.secondComponent = tabs
-        setContent(splitter)
+        setContent(wrapBanner(banner, splitter))
         applyResponsiveLayout()
 
         val rootPath = TreePath(rootNode.path)

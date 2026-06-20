@@ -20,6 +20,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JTable
 import javax.swing.table.TableCellRenderer
+import javax.swing.table.TableColumn
 import javax.swing.tree.DefaultMutableTreeNode
 
 private fun annotatedOf(value: Any?): AnnotatedNode? =
@@ -82,7 +83,33 @@ fun buildTreeTable(root: DefaultMutableTreeNode): TreeTableView {
     table.columnModel.getColumn(1).cellRenderer = MutedTextRenderer()
     table.columnModel.getColumn(2).cellRenderer = StatusTextRenderer()
     table.columnModel.getColumn(3).cellRenderer = SideEffectPillRenderer()
+    // 记下状态/副作用列对象,窄停靠时整列收起、宽时恢复(见 applyTreeColumnLayout)
+    table.putClientProperty(KEY_STATUS_COLUMN, table.columnModel.getColumn(2))
+    table.putClientProperty(KEY_SIDE_COLUMN, table.columnModel.getColumn(3))
     return table
+}
+
+private const val KEY_STATUS_COLUMN = "threadmap.statusColumn"
+private const val KEY_SIDE_COLUMN = "threadmap.sideEffectColumn"
+
+/**
+ * 窄停靠时收起「状态 / 副作用」两列——状态已由行左侧颜色条表达、副作用在详情面板可见——
+ * 把宽度让给「调用链路」,避免方法名被截断成 "submitR…";宽停靠时恢复全 4 列。
+ */
+fun applyTreeColumnLayout(table: TreeTableView, narrow: Boolean) {
+    val cm = table.columnModel
+    val status = table.getClientProperty(KEY_STATUS_COLUMN) as? TableColumn ?: return
+    val side = table.getClientProperty(KEY_SIDE_COLUMN) as? TableColumn ?: return
+    val shown = (0 until cm.columnCount).map { cm.getColumn(it) }.toHashSet()
+    if (narrow) {
+        if (status in shown) cm.removeColumn(status)
+        if (side in shown) cm.removeColumn(side)
+        cm.getColumn(0).preferredWidth = JBUI.scale(360)
+    } else {
+        if (status !in shown) cm.addColumn(status)
+        if (side !in shown) cm.addColumn(side)
+        cm.getColumn(0).preferredWidth = JBUI.scale(300)
+    }
 }
 
 private class MutedTextRenderer : ColoredTableCellRenderer() {
