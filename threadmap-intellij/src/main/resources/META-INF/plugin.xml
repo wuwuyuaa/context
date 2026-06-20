@@ -15,6 +15,7 @@
     <actions>
         <action id="threadmap.ShowChain"
                 class="com.threadmap.intellij.psi.ShowChainAction"
+                icon="AllIcons.Actions.GroupBy"
                 text="看这条链"
                 description="静态走出从此方法出发的调用链,在脉络工具窗渲染">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>

@@ -21,7 +21,8 @@ import java.time.Instant
 /** 编辑器右键「看这条链」:从光标所在方法静态走出调用链,渲染进脉络工具窗。 */
 class ShowChainAction : AnAction("看这条链") {
 
-    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    // 读 PSI 必须在后台线程:2024.2 禁止在 EDT 上请求 psi.File(否则 update 抛异常、菜单项被隐藏)。
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabledAndVisible = methodAt(e) != null
@@ -45,8 +46,8 @@ class ShowChainAction : AnAction("看这条链") {
 
     private fun methodAt(e: AnActionEvent): PsiMethod? {
         val file = e.getData(CommonDataKeys.PSI_FILE) ?: return null
-        val editor = e.getData(CommonDataKeys.EDITOR) ?: return null
-        val el = file.findElementAt(editor.caretModel.offset) ?: return null
+        val caret = e.getData(CommonDataKeys.CARET) ?: return null
+        val el = file.findElementAt(caret.offset) ?: return null
         return PsiTreeUtil.getParentOfType(el, PsiMethod::class.java)
     }
 
