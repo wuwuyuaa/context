@@ -5,11 +5,15 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.util.PsiTreeUtil
 import com.threadmap.core.annotate.AnnotatedNode
 import com.threadmap.core.annotate.AnnotatedTree
+import com.threadmap.core.trace.Trace
+import com.threadmap.core.trace.TraceJsonWriter
 import com.threadmap.core.trace.TraceNode
 import com.threadmap.intellij.ui.ThreadmapPanel
 import java.time.Instant
@@ -31,6 +35,7 @@ class ShowChainAction : AnAction("看这条链") {
             StaticCallGraphWalker(base).walk(method)
         }
         val tree = AnnotatedTree(traceRoot.signature, Instant.now().toString(), toAnnotated(traceRoot))
+        writeStaticTrace(project, traceRoot)
         val tw = ToolWindowManager.getInstance(project).getToolWindow("脉络 (Threadmap)") ?: return
         tw.activate {
             val panel = tw.contentManager.contents.firstOrNull()?.component as? ThreadmapPanel
@@ -49,6 +54,21 @@ class ShowChainAction : AnAction("看这条链") {
         val a = AnnotatedNode(n.id, n.signature, n.file, n.line, 0)
         n.children.forEach { a.addChild(toAnnotated(it)) }
         return a
+    }
+
+    /** 落 .threadmap/static-trace.json(与运行时 trace 同构),供现有 runCli 标注管线消费。 */
+    private fun writeStaticTrace(project: Project, traceRoot: TraceNode) {
+        val base = project.basePath ?: return
+        try {
+            val out = java.nio.file.Path.of(base, ".threadmap", "static-trace.json")
+            java.nio.file.Files.createDirectories(out.parent)
+            java.nio.file.Files.writeString(
+                out,
+                TraceJsonWriter().toJson(Trace(traceRoot.signature, Instant.now().toString(), traceRoot))
+            )
+        } catch (e: Exception) {
+            Logger.getInstance(ShowChainAction::class.java).warn("写入 static-trace.json 失败", e)
+        }
     }
 
     private fun guessBasePackage(m: PsiMethod): String {
