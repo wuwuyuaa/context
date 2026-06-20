@@ -1,0 +1,59 @@
+package com.threadmap.intellij.psi
+
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.util.PsiTreeUtil
+import com.threadmap.core.annotate.AnnotatedNode
+import com.threadmap.core.annotate.AnnotatedTree
+import com.threadmap.core.trace.TraceNode
+import com.threadmap.intellij.ui.ThreadmapPanel
+import java.time.Instant
+
+/** 编辑器右键「看这条链」:从光标所在方法静态走出调用链,渲染进脉络工具窗。 */
+class ShowChainAction : AnAction("看这条链") {
+
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+    override fun update(e: AnActionEvent) {
+        e.presentation.isEnabledAndVisible = methodAt(e) != null
+    }
+
+    override fun actionPerformed(e: AnActionEvent) {
+        val project = e.project ?: return
+        val method = methodAt(e) ?: return
+        val base = guessBasePackage(method)
+        val traceRoot = ReadAction.compute<TraceNode, RuntimeException> {
+            StaticCallGraphWalker(base).walk(method)
+        }
+        val tree = AnnotatedTree(traceRoot.signature, Instant.now().toString(), toAnnotated(traceRoot))
+        val tw = ToolWindowManager.getInstance(project).getToolWindow("脉络 (Threadmap)") ?: return
+        tw.activate {
+            val panel = tw.contentManager.contents.firstOrNull()?.component as? ThreadmapPanel
+            panel?.renderStaticTree(tree)
+        }
+    }
+
+    private fun methodAt(e: AnActionEvent): PsiMethod? {
+        val file = e.getData(CommonDataKeys.PSI_FILE) ?: return null
+        val editor = e.getData(CommonDataKeys.EDITOR) ?: return null
+        val el = file.findElementAt(editor.caretModel.offset) ?: return null
+        return PsiTreeUtil.getParentOfType(el, PsiMethod::class.java)
+    }
+
+    private fun toAnnotated(n: TraceNode): AnnotatedNode {
+        val a = AnnotatedNode(n.id, n.signature, n.file, n.line, 0)
+        n.children.forEach { a.addChild(toAnnotated(it)) }
+        return a
+    }
+
+    private fun guessBasePackage(m: PsiMethod): String {
+        val fqn = m.containingClass?.qualifiedName ?: return ""
+        val parts = fqn.split('.')
+        return if (parts.size >= 3) parts.take(3).joinToString(".") else fqn.substringBeforeLast('.')
+    }
+}

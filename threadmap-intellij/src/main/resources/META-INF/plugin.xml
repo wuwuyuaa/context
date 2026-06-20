@@ -11,4 +11,13 @@
         <toolWindow id="脉络 (Threadmap)" anchor="right" secondary="false"
                     factoryClass="com.threadmap.intellij.ui.ThreadmapToolWindowFactory"/>
     </extensions>
+
+    <actions>
+        <action id="threadmap.ShowChain"
+                class="com.threadmap.intellij.psi.ShowChainAction"
+                text="看这条链"
+                description="静态走出从此方法出发的调用链,在脉络工具窗渲染">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
+    </actions>
 </idea-plugin>

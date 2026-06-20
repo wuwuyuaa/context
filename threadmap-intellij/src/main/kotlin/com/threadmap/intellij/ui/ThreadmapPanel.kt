@@ -236,6 +236,13 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         }
     }
 
+    /** 由静态 walker 等外部来源直接渲染一棵已构建的 AnnotatedTree(无需读盘）。 */
+    fun renderStaticTree(tree: AnnotatedTree) {
+        currentTree = tree
+        selectedSignature = tree.root.signature
+        showTree(tree, selectedSignature)
+    }
+
     private fun showTree(tree: AnnotatedTree, preferredSignature: String?) {
         val filter = activeFilter()
         val rootNode = CallTreeNodeBuilder.build(tree, filter)
