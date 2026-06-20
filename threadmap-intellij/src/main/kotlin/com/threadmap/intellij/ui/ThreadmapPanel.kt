@@ -106,7 +106,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) = applyResponsiveLayout()
         })
-        loadDefault()
+        showEntryList()
     }
 
     /** 宽时左右排(树左详情右)、窄时上下排(树上详情下),随工具窗宽度自适应。 */
@@ -123,8 +123,16 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
 
     /** 入口清单(正门):列出项目的 HTTP 端点,点一个走现有静态链路渲染进同一工具窗。右键是另一道门。 */
     private fun showEntryList() {
+        if (com.intellij.openapi.project.DumbService.getInstance(project).isDumb) {
+            setContent(emptyState("索引完成后点「入口」查看 HTTP 入口清单;也可以直接在方法上右键「看这条链」。"))
+            return
+        }
         val all = ReadAction.compute<List<EntryPoint>, RuntimeException> {
-            EntryPointScanner.scan(project)
+            try {
+                EntryPointScanner.scan(project)
+            } catch (e: com.intellij.openapi.project.IndexNotReadyException) {
+                emptyList()
+            }
         }
         if (all.isEmpty()) {
             setContent(emptyState("没扫到 HTTP 入口(@RestController / @RequestMapping)。也可以直接在方法上右键「看这条链」。"))
