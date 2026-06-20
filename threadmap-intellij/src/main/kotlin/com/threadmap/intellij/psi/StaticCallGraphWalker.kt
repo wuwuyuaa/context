@@ -2,6 +2,8 @@ package com.threadmap.intellij.psi
 
 import com.intellij.codeInsight.AnnotationUtil
 import com.intellij.psi.*
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.search.searches.ClassInheritorsSearch
 import com.intellij.psi.util.PropertyUtilBase
 import com.intellij.psi.util.PsiTreeUtil
 import com.threadmap.core.trace.TraceNode
@@ -87,6 +89,13 @@ class StaticCallGraphWalker(private val basePackage: String, private val maxDept
         return CallTarget(fqn, inBase, iface, comp, repoPort, getter, ownPrivate)
     }
 
-    /** S2 占位：接口不解析（返回 null，调用方退回用接口本身）。S3 覆盖。 */
-    private fun resolveImpl(callee: PsiMethod): PsiMethod? = null
+    /** 接口方法 → 范围内唯一实现的对应方法；0 或多实现返回 null（调用方退回接口节点）。 */
+    private fun resolveImpl(callee: PsiMethod): PsiMethod? {
+        val cls = callee.containingClass ?: return null
+        if (!cls.isInterface) return null
+        val impls = ClassInheritorsSearch.search(cls, GlobalSearchScope.projectScope(cls.project), true)
+            .findAll().filter { it.qualifiedName?.startsWith(basePackage) == true && !it.isInterface }
+        val only = impls.singleOrNull() ?: return null
+        return only.findMethodsBySignature(callee, true).firstOrNull()
+    }
 }

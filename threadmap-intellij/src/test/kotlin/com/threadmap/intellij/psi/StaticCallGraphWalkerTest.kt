@@ -19,6 +19,19 @@ class StaticCallGraphWalkerTest : LightJavaCodeInsightFixtureTestCase() {
         myFixture.addClass("package com.ae.x; import org.springframework.stereotype.Service; @Service public class C { public void calc(){} }")
     }
 
+    fun testResolvesSingleImplementationOfInterface() {
+        myFixture.addClass("package org.springframework.stereotype; public @interface Service {}")
+        myFixture.addClass("package com.ae.x; public interface P { void go(); }")
+        myFixture.addClass("package com.ae.x; import org.springframework.stereotype.Service; @Service public class PImpl implements P { public void go(){} }")
+        myFixture.addClass("""
+            package com.ae.x; import org.springframework.stereotype.Service;
+            @Service public class U { private final P p; public U(P p){this.p=p;} public void run(){ p.go(); } }""")
+        val u = myFixture.findClass("com.ae.x.U")
+        val root = StaticCallGraphWalker("com.ae.x").walk(u.findMethodsByName("run", false).first())
+        // p.go() 接口调用应解析到 PImpl#go
+        assertTrue(root.children.single().signature.contains("PImpl#go"))
+    }
+
     fun testWalksComponentCallsSkipsLibAndFollowsPrivateHelper() {
         addBeans()
         val a = myFixture.findClass("com.ae.x.A")
