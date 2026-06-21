@@ -44,6 +44,7 @@ import com.intellij.openapi.progress.Task
 import com.threadmap.intellij.model.CallGraph
 import com.threadmap.intellij.model.CallGraphBuilder
 import com.threadmap.intellij.model.CallTreeNodeBuilder
+import com.threadmap.intellij.model.MasteryProgress
 import com.threadmap.intellij.model.ProgressStore
 import com.threadmap.intellij.model.TodoExporter
 import com.threadmap.intellij.model.TreeFilter
@@ -96,6 +97,11 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
     private val search = SearchTextField(false).apply {
         textEditor.emptyText.text = "过滤方法 / 类名"
         preferredSize = Dimension(JBUI.scale(190), preferredSize.height)
+    }
+    // 接管阅读闭环:右侧显示「已掌握 N/M」+「下一个待读 →」,一路点着走完整条链
+    private val masteryLabel = JBLabel()
+    private val nextPendingLink = HyperlinkLabel("下一个待读 →").apply {
+        toolTipText = "跳到下一个还没标「已掌握」的节点(循环)"
     }
 
     private var currentTree: AnnotatedTree? = null
@@ -280,10 +286,16 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             add(search)
         }
 
+        val mastery = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(8), 0)).apply {
+            isOpaque = false
+            add(masteryLabel)
+            add(nextPendingLink)
+        }
         return JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             border = JBUI.Borders.empty(3, 5)
             add(actions.component, BorderLayout.WEST)
             add(filters, BorderLayout.CENTER)
+            add(mastery, BorderLayout.EAST)
         }
     }
 
@@ -303,6 +315,32 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         search.addDocumentListener(object : DocumentAdapter() {
             override fun textChanged(e: DocumentEvent) = applyFilters()
         })
+        nextPendingLink.addHyperlinkListener { gotoNextPending() }
+    }
+
+    /** 跳到下一个未标「已掌握」的节点(循环)。全部掌握则提示。 */
+    private fun gotoNextPending() {
+        val tree = currentTree ?: return
+        val next = MasteryProgress.nextPending(tree, selectedSignature)
+        if (next == null) {
+            updateMasteryProgress()
+            Messages.showInfoMessage(project, "这条链已全部标「已掌握」🎉", "脉络:接管完成")
+            return
+        }
+        revealSignature(tree, next)
+    }
+
+    /** 刷新工具栏右侧「已掌握 N/M」。无树或无节点时清空。 */
+    private fun updateMasteryProgress() {
+        val tree = currentTree
+        if (tree == null) {
+            masteryLabel.text = ""
+            nextPendingLink.isVisible = false
+            return
+        }
+        val c = MasteryProgress.counts(tree)
+        masteryLabel.text = if (c.total == 0) "" else "已掌握 ${c.mastered}/${c.total}"
+        nextPendingLink.isVisible = c.total > 0
     }
 
     private fun applyFilters() {
@@ -500,6 +538,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             splitter.secondComponent = tabs
             setContent(wrapBanner(banner, splitter))
             applyResponsiveLayout()
+            updateMasteryProgress()
             return
         }
 
@@ -531,6 +570,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             table.tree.selectionPath = rootPath
             table.tree.scrollPathToVisible(rootPath)
         }
+        updateMasteryProgress()
     }
 
     private fun setGraphMode(on: Boolean) {
@@ -602,6 +642,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
                         store.update(tree, node.signature, state)
                         if (activeFilter().understanding == UnderstandingFilter.ALL) {
                             table.repaint()
+                            updateMasteryProgress() // 标了「已掌握」立刻更新 N/M
                         } else {
                             showTree(tree, node.signature)
                         }
