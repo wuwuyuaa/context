@@ -55,6 +55,10 @@ public class AnnotatedTreeJsonReader {
         if (confidence != null && !confidence.isNull()) {
             an.setConfidence(confidence.asText());
         }
+        JsonNode sourceHash = n.get("source_hash");
+        if (sourceHash != null && !sourceHash.isNull()) {
+            an.setSourceHash(sourceHash.asText());
+        }
         if (n.has("summary")) {
             an.setAnnotation(annotation(n));
         }

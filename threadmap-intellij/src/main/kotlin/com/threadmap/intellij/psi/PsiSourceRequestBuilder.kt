@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project
 import com.threadmap.core.annotate.AnnotatedNode
 import com.threadmap.core.annotate.AnnotationRequest
 import com.threadmap.core.annotate.AnnotationRequestBuilder
+import com.threadmap.intellij.model.SourceHash
 
 /**
  * 用 PSI 给节点填方法源码 + 被调名,让 LLM 基于真实代码标注(2b)。
@@ -14,7 +15,11 @@ class PsiSourceRequestBuilder(private val project: Project) : AnnotationRequestB
     override fun build(node: AnnotatedNode): AnnotationRequest =
         ReadAction.compute<AnnotationRequest, RuntimeException> {
             val e = PsiMethodSource.extract(project, node.signature)
-            if (e != null) AnnotationRequest(node.signature, e.source, e.calleeNames)
-            else AnnotationRequest.ofSignature(node.signature)
+            if (e != null) {
+                node.sourceHash = SourceHash.of(e.source) // 记下本次标注基于的源码 hash,供日后过期检测
+                AnnotationRequest(node.signature, e.source, e.calleeNames)
+            } else {
+                AnnotationRequest.ofSignature(node.signature)
+            }
         }
 }

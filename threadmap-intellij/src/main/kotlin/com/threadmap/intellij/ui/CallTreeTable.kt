@@ -61,6 +61,7 @@ class SideEffectColumn : ColumnInfo<DefaultMutableTreeNode, String>("副作用")
         if (base.isNotBlank()) base.split(", ").filterTo(tags) { it.isNotBlank() }
         tags.addAll(NodePresentation.markers(n))
         NodePresentation.confidenceLabel(n)?.let { tags.add(it) } // 静态推断/不确定的提醒
+        if (NodePresentation.isStale(n)) tags.add(NodePresentation.STALE_LABEL) // 源码已变,标注可能过期
         return tags.joinToString(", ")
     }
 }
@@ -167,6 +168,7 @@ private class StatusTextRenderer : ColoredTableCellRenderer() {
 /** 副作用类型 → 配色;树徽章与详情面板共用,保证视觉一致。 */
 object SideEffectStyle {
     fun background(tag: String): Color = when {
+        tag == NodePresentation.STALE_LABEL -> JBColor(Color(0xFCE4E4), Color(0x4A2A2A)) // 过期:红,最该警惕
         tag in NodePresentation.CONFIDENCE_LABELS -> JBColor(Color(0xFFF3DE), Color(0x42361E)) // 可信度:琥珀,警示
         tag in SpringMarkers.LABELS -> JBColor(Color(0xE3F4F1), Color(0x1F3A37)) // Spring 标签:青色系,自成一族
         tag.contains("读") -> JBColor(Color(0xEEF0F3), Color(0x34363A)) // DB读:中性灰,不抢眼
@@ -177,6 +179,7 @@ object SideEffectStyle {
     }
 
     fun border(tag: String): Color = when {
+        tag == NodePresentation.STALE_LABEL -> JBColor(Color(0xE0A0A0), Color(0x7A4444))
         tag in NodePresentation.CONFIDENCE_LABELS -> JBColor(Color(0xE0B25C), Color(0x6E5A2E))
         tag in SpringMarkers.LABELS -> JBColor(Color(0x8FCcC4), Color(0x3C6B64))
         tag.contains("读") -> JBColor.border()

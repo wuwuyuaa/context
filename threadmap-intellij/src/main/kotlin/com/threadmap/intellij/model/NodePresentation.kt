@@ -42,6 +42,11 @@ object NodePresentation {
     /** 可信度标签全集(供 UI 配色判断)。 */
     val CONFIDENCE_LABELS: Set<String> = setOf("单实现推断", "多实现?", "未解析")
 
+    /** 标注是否可能过期:有标注、且当前源码 hash 与标注时不符(stale 由后台重算置上)。 */
+    fun isStale(node: AnnotatedNode): Boolean = node.annotation != null && node.isStale
+
+    const val STALE_LABEL: String = "可能过期"
+
     fun statusStyle(node: AnnotatedNode): StatusStyle = when (
         node.understanding ?: Understanding.UNKNOWN
     ) {

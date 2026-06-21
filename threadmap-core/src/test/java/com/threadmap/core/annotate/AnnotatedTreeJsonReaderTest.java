@@ -12,6 +12,7 @@ class AnnotatedTreeJsonReaderTest {
         root.setUnderstanding(Understanding.MASTERED);
         root.setMarkers(List.of("事务", "异步"));
         root.setConfidence("single_impl");
+        root.setSourceHash("deadbeef12345678");
         root.setAnnotation(new Annotation("做 A", "无", "B 结果",
                 List.of("DB写"), new Evidence("com/example/A.java", "10-20", List.of("b")),
                 true, "核心逻辑"));
@@ -38,6 +39,7 @@ class AnnotatedTreeJsonReaderTest {
         assertEquals(Understanding.MASTERED, root.getUnderstanding());
         assertEquals(List.of("事务", "异步"), root.getMarkers());
         assertEquals("single_impl", root.getConfidence());
+        assertEquals("deadbeef12345678", root.getSourceHash());
         assertNotNull(root.getAnnotation());
         assertEquals("做 A", root.getAnnotation().summary());
         assertTrue(root.getAnnotation().sideEffects().contains("DB写"));

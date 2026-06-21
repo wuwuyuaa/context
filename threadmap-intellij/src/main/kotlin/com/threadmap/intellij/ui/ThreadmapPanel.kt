@@ -52,6 +52,8 @@ import com.threadmap.intellij.model.TreeFilter
 import com.threadmap.intellij.model.UnderstandingFilter
 import com.threadmap.intellij.psi.EntryPoint
 import com.threadmap.intellij.psi.EntryPointScanner
+import com.threadmap.intellij.model.SourceHash
+import com.threadmap.intellij.psi.PsiMethodSource
 import com.threadmap.intellij.psi.PsiSourceRequestBuilder
 import com.threadmap.intellij.psi.StaticChain
 import com.intellij.openapi.application.ReadAction
@@ -505,6 +507,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             currentTree = tree
             selectedSignature = tree.root.signature
             showTree(tree, selectedSignature)
+            checkStaleness(tree) // 后台重算源码 hash,标注过期的亮「可能过期」
         } catch (e: Exception) {
             currentTree = null
             currentTable = null
@@ -512,6 +515,28 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             setContent(emptyState("无法加载调用树：${e.message ?: "未知错误"}"))
             Messages.showErrorDialog(project, "无法加载 $path。\n${e.message}", "脉络加载失败")
         }
+    }
+
+    /** 后台重算各已标注节点的当前源码 hash,与标注时的 sourceHash 比对,不符则置 stale 并刷新表格。 */
+    private fun checkStaleness(tree: AnnotatedTree) {
+        ReadAction.nonBlocking(java.util.concurrent.Callable {
+            var any = false
+            fun walk(n: AnnotatedNode) {
+                if (n.annotation != null && n.sourceHash.isNotEmpty()) {
+                    val cur = PsiMethodSource.extract(project, n.signature)?.source
+                    val stale = cur != null && SourceHash.of(cur) != n.sourceHash
+                    n.isStale = stale
+                    if (stale) any = true
+                }
+                n.children.forEach { walk(it) }
+            }
+            walk(tree.root)
+            any
+        }).inSmartMode(project)
+            .finishOnUiThread(com.intellij.openapi.application.ModalityState.defaultModalityState()) { anyStale ->
+                if (anyStale) currentTable?.repaint()
+            }
+            .submit(com.intellij.util.concurrency.AppExecutorUtil.getAppExecutorService())
     }
 
     /** 由静态 walker 等外部来源直接渲染一棵已构建的 AnnotatedTree(无需读盘）。 */

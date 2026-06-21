@@ -38,6 +38,9 @@ public class AnnotatedTreeJsonWriter {
         if (!n.getConfidence().isEmpty()) {
             o.put("confidence", n.getConfidence());
         }
+        if (!n.getSourceHash().isEmpty()) {
+            o.put("source_hash", n.getSourceHash());
+        }
 
         Annotation a = n.getAnnotation();
         if (a != null) {
