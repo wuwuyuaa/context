@@ -217,31 +217,29 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
 
     private fun buildToolbar(): JPanel {
         val group = DefaultActionGroup().apply {
-            add(toolbarAction("加载", "选择 annotated-tree.json 加载", AllIcons.Actions.MenuOpen) {
-                chooseAndLoad()
+            // 高频留前面:入口(正门)/刷新/图视图;低频收进「⋮ 更多」,给中间筛选腾地方。
+            add(toolbarAction("入口", "列出项目的 HTTP 入口,点一个看它的链路", AllIcons.Actions.ListFiles) {
+                showEntryList()
             })
             add(toolbarAction("刷新", "重新加载当前项目的调用树", AllIcons.Actions.Refresh) {
                 loadDefault()
-            })
-            addSeparator()
-            add(toolbarAction("展开", "展开调用树的所有节点", AllIcons.Actions.Expandall) {
-                setAllExpanded(true)
-            })
-            add(toolbarAction("折叠", "折叠除入口外的所有节点", AllIcons.Actions.Collapseall) {
-                setAllExpanded(false)
-            })
-            addSeparator()
-            add(toolbarAction("入口", "列出项目的 HTTP 入口,点一个看它的链路", AllIcons.Actions.ListFiles) {
-                showEntryList()
             })
             if (graphPanel != null) {
                 addSeparator()
                 add(object : ToggleAction("图视图", "在树与调用图之间切换", AllIcons.Actions.GroupBy) {
                     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+                    override fun displayTextInToolbar(): Boolean = true
                     override fun isSelected(e: AnActionEvent): Boolean = graphMode
                     override fun setSelected(e: AnActionEvent, state: Boolean) { setGraphMode(state) }
                 })
             }
+            addSeparator()
+            add(DefaultActionGroup("更多", true).apply {
+                templatePresentation.icon = AllIcons.Actions.More
+                add(toolbarAction("加载", "选择 annotated-tree.json 加载", AllIcons.Actions.MenuOpen) { chooseAndLoad() })
+                add(toolbarAction("展开", "展开调用树的所有节点", AllIcons.Actions.Expandall) { setAllExpanded(true) })
+                add(toolbarAction("折叠", "折叠除入口外的所有节点", AllIcons.Actions.Collapseall) { setAllExpanded(false) })
+            })
         }
         val actions = ActionManager.getInstance()
             .createActionToolbar("ThreadmapToolbar", group, true).apply {
