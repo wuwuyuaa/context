@@ -2,7 +2,19 @@
     <id>com.threadmap.intellij</id>
     <name>脉络 Threadmap</name>
     <vendor>threadmap</vendor>
-    <description>渲染 threadmap 引擎产出的 annotated-tree.json:列式调用树 + 标注 + 接管进度。</description>
+    <description><![CDATA[
+<b>脉络 (Threadmap)</b> —— Spring 项目接管助手。从 HTTP 入口静态走出一条调用链,在工具窗里把它读懂:
+<ul>
+<li><b>入口清单</b> → 点一个,静态走出它的调用树(穿透接口到实现,并标注链路可信度:单实现推断 / 多实现不确定);</li>
+<li><b>结构标签</b>:Spring 语义(事务 / 异步 / 重试 / 缓存)+ 数据副作用(DB 读写 / 外部 / 消息),无需 LLM、即时;</li>
+<li><b>一键 AI 标注</b>:用<b>你自己配置的</b> LLM(OpenAI 兼容:通义 / DeepSeek / Kimi / 智谱 / OpenAI / Ollama 等),基于方法源码为每个节点生成摘要 + 风险 + 证据;失败明确报错,绝不伪造;</li>
+<li><b>接管阅读</b>:「已掌握 N/M」进度 +「下一个待读」逐节点走完;源码变了自动标「可能过期」。</li>
+</ul>
+<b>隐私:</b> 点「标注」时会把所选方法的源码发送到你配置的 LLM 服务商;不点标注则全程本地、零外发。Key 存于 IDE 安全库。
+]]></description>
+    <change-notes><![CDATA[
+<b>0.1.0</b> — 首个版本:入口清单 + 静态调用链 + 链路可信度 + Spring 语义标签 + 基于源码的 AI 标注(多服务商)+ 接管阅读进度 + 标注过期检测 + 磁盘缓存。
+]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>

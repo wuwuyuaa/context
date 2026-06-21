@@ -1,0 +1,17 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 脉络:一条静态走出的调用链 + 分支,中段是数据/副作用里程碑(琥珀) -->
+  <g stroke="#4C84F0" stroke-width="2.4" stroke-linecap="round">
+    <path d="M12 9 V20"/>
+    <path d="M12 20 H24"/>
+    <path d="M24 20 V13"/>
+    <path d="M24 20 V27"/>
+    <path d="M12 20 V31"/>
+  </g>
+  <g fill="#4C84F0">
+    <circle cx="12" cy="9" r="3.6"/>
+    <circle cx="24" cy="13" r="3"/>
+    <circle cx="24" cy="27" r="3"/>
+    <circle cx="12" cy="31" r="3"/>
+  </g>
+  <circle cx="12" cy="20" r="3" fill="#E0833A"/>
+</svg>

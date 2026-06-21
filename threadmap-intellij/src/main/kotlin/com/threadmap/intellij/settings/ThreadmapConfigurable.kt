@@ -45,6 +45,10 @@ class ThreadmapConfigurable : Configurable {
                 JBLabel("<html><small>Key 存于 IDE 安全库;多数服务商走 OpenAI 兼容协议,选预设即可。" +
                     "本地 Ollama 可不填 Key。</small></html>")
             )
+            .addComponentToRightColumn(
+                JBLabel("<html><small><font color='#C0833A'>⚠ 隐私:点「标注」时," +
+                    "会把所选方法的源码发送到上面配置的 LLM 服务商。</font></small></html>")
+            )
             .addComponentFillVertically(JPanel(), 0)
             .panel
         return root!!
