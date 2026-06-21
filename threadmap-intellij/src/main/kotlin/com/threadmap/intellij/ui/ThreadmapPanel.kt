@@ -263,6 +263,10 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
                 add(toolbarAction("加载", "选择 annotated-tree.json 加载", AllIcons.Actions.MenuOpen) { chooseAndLoad() })
                 add(toolbarAction("展开", "展开调用树的所有节点", AllIcons.Actions.Expandall) { setAllExpanded(true) })
                 add(toolbarAction("折叠", "折叠除入口外的所有节点", AllIcons.Actions.Collapseall) { setAllExpanded(false) })
+                addSeparator()
+                add(toolbarAction("选服务商 / API Key…", "选 LLM 服务商并填 key(标注用)", AllIcons.General.Settings) {
+                    ShowSettingsUtil.getInstance().showSettingsDialog(project, ThreadmapConfigurable::class.java)
+                })
             })
         }
         val actions = ActionManager.getInstance()
@@ -359,12 +363,6 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             border = JBUI.Borders.empty(2, 8)
             add(JBLabel("✓ 结构已就绪 — 想要每步的 AI 摘要 / 风险标注?"))
             add(HyperlinkLabel("一键标注主干").apply { addHyperlinkListener { annotateChain(true) } })
-            add(JBLabel("·"))
-            add(HyperlinkLabel("选服务商").apply {
-                addHyperlinkListener {
-                    ShowSettingsUtil.getInstance().showSettingsDialog(project, ThreadmapConfigurable::class.java)
-                }
-            })
         }
 
     /** 一键在插件内标注当前链(直连 DashScope、不依赖 langchain4j)。spineOnly=true 只标主干省 token。 */
