@@ -46,10 +46,13 @@ class NodePresentationTest {
     fun structuralSideEffectFromClassName() {
         fun n(sig: String) = AnnotatedNode(0, sig, "x", 0, 1)
         assertEquals("DB写", NodePresentation.structuralSideEffect(n("a.b.OrderRepository#save(O)")))
+        assertEquals("DB读", NodePresentation.structuralSideEffect(n("a.b.OrderRepository#findByName(S)")))
+        assertEquals("DB写", NodePresentation.structuralSideEffect(n("a.b.UserDao#insertBatch(U)")))
+        assertEquals("DB读", NodePresentation.structuralSideEffect(n("a.b.UserDao#countAll()")))
         assertEquals("外部API", NodePresentation.structuralSideEffect(n("a.b.SellerCenterPort#fetch(S)")))
         assertEquals("消息", NodePresentation.structuralSideEffect(n("a.b.EventPublisher#publish(E)")))
         assertNull(NodePresentation.structuralSideEffect(n("a.b.OrderService#place(C)")))
-        assertTrue(NodePresentation.isMilestone(n("a.b.UserDao#insert(U)")))
+        assertTrue(NodePresentation.isMilestone(n("a.b.OrderRepository#findByName(S)"))) // 读也是里程碑
         assertFalse(NodePresentation.isMilestone(n("a.b.PriceCalculator#calc()")))
     }
 }

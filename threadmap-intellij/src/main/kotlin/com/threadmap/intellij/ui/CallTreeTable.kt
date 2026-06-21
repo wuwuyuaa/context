@@ -160,14 +160,16 @@ private class StatusTextRenderer : ColoredTableCellRenderer() {
 /** 副作用类型 → 配色;树徽章与详情面板共用,保证视觉一致。 */
 object SideEffectStyle {
     fun background(tag: String): Color = when {
-        tag.contains("DB", true) || tag.contains("表") -> JBColor(Color(0xFDEBEC), Color(0x4A292B))
+        tag.contains("读") -> JBColor(Color(0xEEF0F3), Color(0x34363A)) // DB读:中性灰,不抢眼
+        tag.contains("DB", true) || tag.contains("写") || tag.contains("表") -> JBColor(Color(0xFDEBEC), Color(0x4A292B))
         tag.contains("API", true) || tag.contains("外部") -> JBColor(Color(0xE8F1FC), Color(0x23384F))
         tag.contains("消息") || tag.contains("MQ", true) -> JBColor(Color(0xF5EDFF), Color(0x392B49))
         else -> JBColor(Color(0xEEF0F3), Color(0x34363A))
     }
 
     fun border(tag: String): Color = when {
-        tag.contains("DB", true) || tag.contains("表") -> JBColor(Color(0xE4A2A6), Color(0x7C4448))
+        tag.contains("读") -> JBColor.border()
+        tag.contains("DB", true) || tag.contains("写") || tag.contains("表") -> JBColor(Color(0xE4A2A6), Color(0x7C4448))
         tag.contains("API", true) || tag.contains("外部") -> JBColor(Color(0x9ABCE2), Color(0x41658B))
         tag.contains("消息") || tag.contains("MQ", true) -> JBColor(Color(0xC4A4E8), Color(0x684E83))
         else -> JBColor.border()
