@@ -54,14 +54,15 @@ class TraceJsonParserTest {
     }
 
     @Test
-    void parsesMarkers() throws Exception {
+    void parsesMarkersAndConfidence() throws Exception {
         String json = """
             {"entry_signature":"A#a()","captured_at":"t","root":{
               "id":0,"signature":"A#a()","file":"A.java","line":0,"self_ms":1,
-              "markers":["事务","异步"],"children":[]}}
+              "markers":["事务","异步"],"confidence":"multi_impl","children":[]}}
             """;
         AnnotatedNode root = new TraceJsonParser().parse(json).getRoot();
         assertEquals(java.util.List.of("事务", "异步"), root.getMarkers());
+        assertEquals("multi_impl", root.getConfidence());
     }
 
     @Test

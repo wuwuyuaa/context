@@ -16,6 +16,7 @@ public class AnnotatedNode {
     private Annotation annotation;                       // nullable: 未标注
     private Understanding understanding = Understanding.UNKNOWN;
     private List<String> markers = List.of();            // 结构标签(Spring 注解:事务/异步/…),无需 LLM
+    private String confidence = "";                       // 静态边可信度:""=确定,single_impl/multi_impl/unresolved
     private final List<AnnotatedNode> children = new ArrayList<>();
 
     public AnnotatedNode(int id, String signature, String file, int line, long selfMs) {
@@ -31,6 +32,7 @@ public class AnnotatedNode {
     public void setAnnotation(Annotation annotation) { this.annotation = annotation; }
     public void setUnderstanding(Understanding understanding) { this.understanding = Objects.requireNonNull(understanding, "understanding must not be null"); }
     public void setMarkers(List<String> markers) { this.markers = markers == null ? List.of() : List.copyOf(markers); }
+    public void setConfidence(String confidence) { this.confidence = confidence == null ? "" : confidence; }
 
     public int getId() { return id; }
     public String getSignature() { return signature; }
@@ -41,5 +43,6 @@ public class AnnotatedNode {
     public Annotation getAnnotation() { return annotation; }
     public Understanding getUnderstanding() { return understanding; }
     public List<String> getMarkers() { return markers; }
+    public String getConfidence() { return confidence; }
     public List<AnnotatedNode> getChildren() { return Collections.unmodifiableList(children); }
 }

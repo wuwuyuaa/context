@@ -33,10 +33,11 @@ class StaticCallGraphWalker(private val basePackage: String, private val maxDept
             val callee = call.resolveMethod() ?: continue
             when (NodePolicy.decide(target(callee, method))) {
                 NodeDecision.INCLUDE -> {
-                    val impl = resolveImpl(callee) ?: callee
+                    val resolved = resolveTarget(callee)
+                    val impl = resolved.method
                     val sig = signatureOf(impl)
-                    if (!onPath.add(sig)) { parent.addChild(newNode(impl, id)); continue }
-                    val child = newNode(impl, id)
+                    if (!onPath.add(sig)) { parent.addChild(newNode(impl, id, resolved.confidence)); continue }
+                    val child = newNode(impl, id, resolved.confidence)
                     collect(impl, child, depth + 1, id, onPath)
                     onPath.remove(sig)
                     parent.addChild(child)
@@ -51,9 +52,10 @@ class StaticCallGraphWalker(private val basePackage: String, private val maxDept
         }
     }
 
-    private fun newNode(m: PsiMethod, id: IntArray): TraceNode =
+    private fun newNode(m: PsiMethod, id: IntArray, confidence: String = ""): TraceNode =
         TraceNode(id[0]++, signatureOf(m), fileOf(m), lineOf(m)).apply {
             setMarkers(markersOf(m))
+            setConfidence(confidence)
         }
 
     /** 读方法本身 + 所在类直接标注的 Spring 注解,映射成结构标签(事务/异步/重试/缓存/定时/鉴权)。 */
@@ -100,13 +102,22 @@ class StaticCallGraphWalker(private val basePackage: String, private val maxDept
         return CallTarget(fqn, inBase, iface, comp, repoPort, getter, ownPrivate)
     }
 
-    /** 接口方法 → 范围内唯一实现的对应方法；0 或多实现返回 null（调用方退回接口节点）。 */
-    private fun resolveImpl(callee: PsiMethod): PsiMethod? {
-        val cls = callee.containingClass ?: return null
-        if (!cls.isInterface) return null
+    private data class Resolved(val method: PsiMethod, val confidence: String)
+
+    /**
+     * 接口方法 → 范围内实现 + 可信度。具体方法=确定("");接口:唯一实现=single_impl(推断)、
+     * 多实现=multi_impl(不确定,仍取接口节点)、0 实现=unresolved。让用户分清「真路径」与「静态推断」。
+     */
+    private fun resolveTarget(callee: PsiMethod): Resolved {
+        val cls = callee.containingClass ?: return Resolved(callee, "")
+        if (!cls.isInterface) return Resolved(callee, "") // 具体方法,直接调用=确定
         val impls = ClassInheritorsSearch.search(cls, GlobalSearchScope.projectScope(cls.project), true)
             .findAll().filter { it.qualifiedName?.startsWith(basePackage) == true && !it.isInterface }
-        val only = impls.singleOrNull() ?: return null
-        return only.findMethodsBySignature(callee, true).firstOrNull()
+        return when (impls.size) {
+            0 -> Resolved(callee, "unresolved")
+            1 -> impls[0].findMethodsBySignature(callee, true).firstOrNull()
+                ?.let { Resolved(it, "single_impl") } ?: Resolved(callee, "unresolved")
+            else -> Resolved(callee, "multi_impl")
+        }
     }
 }

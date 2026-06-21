@@ -28,8 +28,37 @@ class StaticCallGraphWalkerTest : LightJavaCodeInsightFixtureTestCase() {
             @Service public class U { private final P p; public U(P p){this.p=p;} public void run(){ p.go(); } }""")
         val u = myFixture.findClass("com.ae.x.U")
         val root = StaticCallGraphWalker("com.ae.x").walk(u.findMethodsByName("run", false).first())
-        // p.go() 接口调用应解析到 PImpl#go
+        // p.go() 接口调用应解析到 PImpl#go,且标为「单实现推断」
         assertTrue(root.children.single().signature.contains("PImpl#go"))
+        assertEquals("single_impl", root.children.single().confidence)
+    }
+
+    fun testMultipleImplementationsMarkedUncertain() {
+        myFixture.addClass("package org.springframework.stereotype; public @interface Service {}")
+        myFixture.addClass("package com.ae.x; public interface P { void go(); }")
+        myFixture.addClass("package com.ae.x; import org.springframework.stereotype.Service; @Service public class PImpl1 implements P { public void go(){} }")
+        myFixture.addClass("package com.ae.x; import org.springframework.stereotype.Service; @Service public class PImpl2 implements P { public void go(){} }")
+        myFixture.addClass("""
+            package com.ae.x; import org.springframework.stereotype.Service;
+            @Service public class U2 { private final P p; public U2(P p){this.p=p;} public void run(){ p.go(); } }""")
+        val u = myFixture.findClass("com.ae.x.U2")
+        val root = StaticCallGraphWalker("com.ae.x").walk(u.findMethodsByName("run", false).first())
+        // 多实现:退回接口节点 P#go,标 multi_impl(不确定)
+        val child = root.children.single()
+        assertTrue(child.signature.contains("P#go"))
+        assertEquals("multi_impl", child.confidence)
+    }
+
+    fun testConcreteCallIsCertain() {
+        myFixture.addClass("package org.springframework.stereotype; public @interface Service {}")
+        myFixture.addClass("package com.ae.x; import org.springframework.stereotype.Service; @Service public class D { public void calc(){} }")
+        myFixture.addClass("""
+            package com.ae.x; import org.springframework.stereotype.Service;
+            @Service public class U3 { private final D d; public U3(D d){this.d=d;} public void run(){ d.calc(); } }""")
+        val u = myFixture.findClass("com.ae.x.U3")
+        val root = StaticCallGraphWalker("com.ae.x").walk(u.findMethodsByName("run", false).first())
+        // 具体类方法直呼 = 确定,confidence 空
+        assertEquals("", root.children.single().confidence)
     }
 
     fun testReadsSpringMarkersFromMethod() {

@@ -31,6 +31,17 @@ object NodePresentation {
     /** 结构标签:Spring「非显式控制流」注解(事务/异步/重试/缓存/定时/鉴权),走链时由 PSI 读出,无需 LLM。 */
     fun markers(node: AnnotatedNode): List<String> = node.markers
 
+    /** 静态边可信度的人读标签;确定调用("")不显示,只在「推断/不确定/未解析」时提醒。 */
+    fun confidenceLabel(node: AnnotatedNode): String? = when (node.confidence) {
+        "single_impl" -> "单实现推断"
+        "multi_impl" -> "多实现?"
+        "unresolved" -> "未解析"
+        else -> null
+    }
+
+    /** 可信度标签全集(供 UI 配色判断)。 */
+    val CONFIDENCE_LABELS: Set<String> = setOf("单实现推断", "多实现?", "未解析")
+
     fun statusStyle(node: AnnotatedNode): StatusStyle = when (
         node.understanding ?: Understanding.UNKNOWN
     ) {

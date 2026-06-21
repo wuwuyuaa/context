@@ -51,6 +51,10 @@ public class AnnotatedTreeJsonReader {
             markers.forEach(m -> ms.add(m.asText()));
             an.setMarkers(ms);
         }
+        JsonNode confidence = n.get("confidence");
+        if (confidence != null && !confidence.isNull()) {
+            an.setConfidence(confidence.asText());
+        }
         if (n.has("summary")) {
             an.setAnnotation(annotation(n));
         }

@@ -11,6 +11,7 @@ class AnnotatedTreeJsonReaderTest {
         AnnotatedNode root = new AnnotatedNode(0, "com.example.A#a()", "com/example/A.java", 0, 5);
         root.setUnderstanding(Understanding.MASTERED);
         root.setMarkers(List.of("事务", "异步"));
+        root.setConfidence("single_impl");
         root.setAnnotation(new Annotation("做 A", "无", "B 结果",
                 List.of("DB写"), new Evidence("com/example/A.java", "10-20", List.of("b")),
                 true, "核心逻辑"));
@@ -36,6 +37,7 @@ class AnnotatedTreeJsonReaderTest {
         assertFalse(root.isCollapsed());
         assertEquals(Understanding.MASTERED, root.getUnderstanding());
         assertEquals(List.of("事务", "异步"), root.getMarkers());
+        assertEquals("single_impl", root.getConfidence());
         assertNotNull(root.getAnnotation());
         assertEquals("做 A", root.getAnnotation().summary());
         assertTrue(root.getAnnotation().sideEffects().contains("DB写"));

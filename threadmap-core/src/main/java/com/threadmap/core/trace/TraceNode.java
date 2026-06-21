@@ -13,6 +13,7 @@ public class TraceNode {
     private final int line;            // 0 = 未解析(下游用 PSI 按签名反查)
     private long elapsedMs;             // 含子节点的总耗时
     private List<String> markers = List.of();  // 结构标签(静态走链时由 PSI 读 Spring 注解填:事务/异步/…)
+    private String confidence = "";            // 静态边可信度:""=确定调用,single_impl/multi_impl/unresolved
     private final List<TraceNode> children = new ArrayList<>();
 
     public TraceNode(int id, String signature, String file, int line) {
@@ -27,6 +28,7 @@ public class TraceNode {
     }
     public void setElapsedMs(long ms) { this.elapsedMs = ms; }
     public void setMarkers(List<String> markers) { this.markers = markers == null ? List.of() : List.copyOf(markers); }
+    public void setConfidence(String confidence) { this.confidence = confidence == null ? "" : confidence; }
 
     /** 自身耗时 = 总耗时 - 直接子节点总耗时,负数归零。 */
     public long selfMs() {
@@ -41,6 +43,7 @@ public class TraceNode {
     public int getLine() { return line; }
     public long getElapsedMs() { return elapsedMs; }
     public List<String> getMarkers() { return markers; }
+    public String getConfidence() { return confidence; }
     public List<TraceNode> getChildren() {
         return Collections.unmodifiableList(children);
     }

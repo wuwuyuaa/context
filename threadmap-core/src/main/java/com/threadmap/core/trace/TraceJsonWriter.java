@@ -32,6 +32,9 @@ public class TraceJsonWriter {
             ArrayNode markers = o.putArray("markers");
             n.getMarkers().forEach(markers::add);
         }
+        if (!n.getConfidence().isEmpty()) {
+            o.put("confidence", n.getConfidence());
+        }
         ArrayNode children = o.putArray("children");
         for (TraceNode c : n.getChildren()) {
             children.add(node(c));

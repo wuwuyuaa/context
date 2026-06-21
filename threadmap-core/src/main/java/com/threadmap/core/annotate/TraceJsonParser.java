@@ -42,6 +42,10 @@ public class TraceJsonParser {
             markers.forEach(m -> ms.add(m.asText()));
             an.setMarkers(ms);
         }
+        JsonNode confidence = n.get("confidence");
+        if (confidence != null && !confidence.isNull()) {
+            an.setConfidence(confidence.asText());
+        }
         JsonNode children = n.get("children");
         if (children != null) {
             for (JsonNode c : children) {

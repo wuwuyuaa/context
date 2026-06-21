@@ -35,6 +35,9 @@ public class AnnotatedTreeJsonWriter {
             ArrayNode markers = o.putArray("markers");
             n.getMarkers().forEach(markers::add);
         }
+        if (!n.getConfidence().isEmpty()) {
+            o.put("confidence", n.getConfidence());
+        }
 
         Annotation a = n.getAnnotation();
         if (a != null) {
