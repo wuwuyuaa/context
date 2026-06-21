@@ -344,8 +344,9 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
     private fun showAnnotateHowTo() {
         val base = project.basePath ?: "<项目根>"
         val cmd = "DASHSCOPE_API_KEY=<你的key> ./gradlew :threadmap-core:runCli \\\n" +
-            "  --args=\"$base/.threadmap/static-trace.json " +
-            "$base/.threadmap/annotated-tree.json <基础包> $base/<源码根>\""
+            "  --args=\"--spine $base/.threadmap/static-trace.json " +
+            "$base/.threadmap/annotated-tree.json <基础包> $base/<源码根>\"\n" +
+            "(--spine = 只标主干省 token;想全量标就去掉 --spine)"
         Messages.showInfoMessage(
             project,
             "在引擎仓库执行(LLM 只在离线侧,不进插件):\n\n$cmd\n\n" +

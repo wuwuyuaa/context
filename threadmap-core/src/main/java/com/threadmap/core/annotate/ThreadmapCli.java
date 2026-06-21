@@ -30,18 +30,27 @@ public final class ThreadmapCli {
      * 读环境变量 DASHSCOPE_API_KEY;无 key 时退化为离线 FakeAnnotator。
      */
     public static void main(String[] args) throws IOException {
-        if (args.length < 3) {
-            System.err.println("用法: ThreadmapCli <trace.json> <out.json> <includePackage> [sourceRoot...]");
+        boolean spineOnly = false;
+        List<String> pos = new ArrayList<>();
+        for (String a : args) {
+            if ("--spine".equals(a)) {
+                spineOnly = true;
+            } else {
+                pos.add(a);
+            }
+        }
+        if (pos.size() < 3) {
+            System.err.println("用法: ThreadmapCli [--spine] <trace.json> <out.json> <includePackage> [sourceRoot...]");
             System.exit(2);
             return;
         }
-        Path trace = Path.of(args[0]);
-        Path out = Path.of(args[1]);
-        String includePackage = args[2];
+        Path trace = Path.of(pos.get(0));
+        Path out = Path.of(pos.get(1));
+        String includePackage = pos.get(2);
 
         List<Path> sourceRoots = new ArrayList<>();
-        for (int i = 3; i < args.length; i++) {
-            sourceRoots.add(Path.of(args[i]));
+        for (int i = 3; i < pos.size(); i++) {
+            sourceRoots.add(Path.of(pos.get(i)));
         }
 
         Annotator annotator = buildAnnotator();
@@ -52,10 +61,11 @@ public final class ThreadmapCli {
         AnnotationPipeline pipeline = new AnnotationPipeline(
                 new PackageFolder(List.of(includePackage), 50),
                 annotator,
-                requestBuilder);
+                requestBuilder,
+                spineOnly);
 
         run(trace, out, pipeline);
-        System.out.println("已写出: " + out);
+        System.out.println("已写出: " + out + (spineOnly ? " (只标主干)" : ""));
     }
 
     private static Annotator buildAnnotator() {
