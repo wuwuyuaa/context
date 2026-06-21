@@ -28,6 +28,10 @@ public class TraceJsonWriter {
         o.put("file", n.getFile());
         o.put("line", n.getLine());
         o.put("self_ms", n.selfMs());
+        if (!n.getMarkers().isEmpty()) {
+            ArrayNode markers = o.putArray("markers");
+            n.getMarkers().forEach(markers::add);
+        }
         ArrayNode children = o.putArray("children");
         for (TraceNode c : n.getChildren()) {
             children.add(node(c));

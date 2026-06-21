@@ -11,6 +11,7 @@ class TraceJsonWriterTest {
     void serializesTreeWithSnakeCaseFields() throws Exception {
         TraceNode root = new TraceNode(0, "A#a()", "com/example/A.java", 5);
         root.setElapsedMs(100);
+        root.setMarkers(java.util.List.of("事务", "异步"));
         TraceNode child = new TraceNode(1, "B#b()", "com/example/B.java", 12);
         child.setElapsedMs(30);
         root.addChild(child);
@@ -28,6 +29,8 @@ class TraceJsonWriterTest {
         assertEquals("com/example/A.java", r.get("file").asText());
         assertEquals(5, r.get("line").asInt());
         assertEquals(70, r.get("self_ms").asInt());
+        assertEquals("事务", r.get("markers").get(0).asText());
+        assertEquals("异步", r.get("markers").get(1).asText());
 
         JsonNode c = r.get("children").get(0);
         assertEquals(1, c.get("id").asInt());

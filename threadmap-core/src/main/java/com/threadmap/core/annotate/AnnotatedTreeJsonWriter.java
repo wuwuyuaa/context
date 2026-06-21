@@ -31,6 +31,10 @@ public class AnnotatedTreeJsonWriter {
         o.put("self_ms", n.getSelfMs());
         o.put("collapsed", n.isCollapsed());
         o.put("understanding", n.getUnderstanding().name().toLowerCase(Locale.ROOT));
+        if (!n.getMarkers().isEmpty()) {
+            ArrayNode markers = o.putArray("markers");
+            n.getMarkers().forEach(markers::add);
+        }
 
         Annotation a = n.getAnnotation();
         if (a != null) {

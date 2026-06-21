@@ -45,6 +45,12 @@ public class AnnotatedTreeJsonReader {
         if (understanding != null && !understanding.isNull()) {
             an.setUnderstanding(Understanding.valueOf(understanding.asText().toUpperCase(Locale.ROOT)));
         }
+        JsonNode markers = n.get("markers");
+        if (markers != null && markers.isArray()) {
+            List<String> ms = new ArrayList<>();
+            markers.forEach(m -> ms.add(m.asText()));
+            an.setMarkers(ms);
+        }
         if (n.has("summary")) {
             an.setAnnotation(annotation(n));
         }

@@ -54,6 +54,17 @@ class TraceJsonParserTest {
     }
 
     @Test
+    void parsesMarkers() throws Exception {
+        String json = """
+            {"entry_signature":"A#a()","captured_at":"t","root":{
+              "id":0,"signature":"A#a()","file":"A.java","line":0,"self_ms":1,
+              "markers":["事务","异步"],"children":[]}}
+            """;
+        AnnotatedNode root = new TraceJsonParser().parse(json).getRoot();
+        assertEquals(java.util.List.of("事务", "异步"), root.getMarkers());
+    }
+
+    @Test
     void rejectsMissingRootWithClearError() {
         String bad = "{\"entry_signature\":\"A#a()\",\"captured_at\":\"t\"}";
         IOException e = assertThrows(IOException.class, () -> new TraceJsonParser().parse(bad));

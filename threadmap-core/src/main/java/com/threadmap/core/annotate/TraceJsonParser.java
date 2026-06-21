@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /** 解析 M1 产出的 trace.json → 未折叠未标注的 AnnotatedTree(只含结构 + self_ms)。 */
 public class TraceJsonParser {
@@ -34,6 +36,12 @@ public class TraceJsonParser {
                 n.get("file").asText(),
                 n.get("line").asInt(),
                 n.get("self_ms").asLong());
+        JsonNode markers = n.get("markers");
+        if (markers != null && markers.isArray()) {
+            List<String> ms = new ArrayList<>();
+            markers.forEach(m -> ms.add(m.asText()));
+            an.setMarkers(ms);
+        }
         JsonNode children = n.get("children");
         if (children != null) {
             for (JsonNode c : children) {
