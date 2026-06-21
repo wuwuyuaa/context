@@ -36,6 +36,7 @@ object StaticChain {
 
     private fun toAnnotated(n: TraceNode): AnnotatedNode {
         val a = AnnotatedNode(n.id, n.signature, n.file, n.line, 0)
+        a.markers = n.markers
         n.children.forEach { a.addChild(toAnnotated(it)) }
         return a
     }

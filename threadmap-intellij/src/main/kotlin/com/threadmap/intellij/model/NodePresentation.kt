@@ -28,6 +28,9 @@ object NodePresentation {
     fun sideEffects(node: AnnotatedNode): String =
         node.annotation?.sideEffects()?.joinToString(", ") ?: ""
 
+    /** 结构标签:Spring「非显式控制流」注解(事务/异步/重试/缓存/定时/鉴权),走链时由 PSI 读出,无需 LLM。 */
+    fun markers(node: AnnotatedNode): List<String> = node.markers
+
     fun statusStyle(node: AnnotatedNode): StatusStyle = when (
         node.understanding ?: Understanding.UNKNOWN
     ) {

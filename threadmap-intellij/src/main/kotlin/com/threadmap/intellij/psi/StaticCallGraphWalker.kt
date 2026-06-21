@@ -7,6 +7,7 @@ import com.intellij.psi.search.searches.ClassInheritorsSearch
 import com.intellij.psi.util.PropertyUtilBase
 import com.intellij.psi.util.PsiTreeUtil
 import com.threadmap.core.trace.TraceNode
+import com.threadmap.intellij.model.SpringMarkers
 
 private val STEREOTYPES = listOf(
     "org.springframework.stereotype.Service", "org.springframework.stereotype.Component",
@@ -51,7 +52,17 @@ class StaticCallGraphWalker(private val basePackage: String, private val maxDept
     }
 
     private fun newNode(m: PsiMethod, id: IntArray): TraceNode =
-        TraceNode(id[0]++, signatureOf(m), fileOf(m), lineOf(m))
+        TraceNode(id[0]++, signatureOf(m), fileOf(m), lineOf(m)).apply {
+            setMarkers(markersOf(m))
+        }
+
+    /** 读方法本身 + 所在类直接标注的 Spring 注解,映射成结构标签(事务/异步/重试/缓存/定时/鉴权)。 */
+    private fun markersOf(m: PsiMethod): List<String> {
+        val fqns = ArrayList<String>()
+        m.annotations.mapNotNullTo(fqns) { it.qualifiedName }
+        m.containingClass?.annotations?.mapNotNullTo(fqns) { it.qualifiedName }
+        return SpringMarkers.labelsFor(fqns)
+    }
 
     /** com.pkg.Cls#method(Param1, Param2) */
     private fun signatureOf(m: PsiMethod): String {

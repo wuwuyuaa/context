@@ -32,6 +32,37 @@ class StaticCallGraphWalkerTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(root.children.single().signature.contains("PImpl#go"))
     }
 
+    fun testReadsSpringMarkersFromMethod() {
+        myFixture.addClass("package org.springframework.stereotype; public @interface Service {}")
+        myFixture.addClass("package org.springframework.transaction.annotation; public @interface Transactional {}")
+        myFixture.addClass("package org.springframework.scheduling.annotation; public @interface Async {}")
+        myFixture.addClass("""
+            package com.ae.x;
+            import org.springframework.stereotype.Service;
+            import org.springframework.transaction.annotation.Transactional;
+            import org.springframework.scheduling.annotation.Async;
+            @Service public class T {
+              @Transactional @Async public void entry(){ }
+            }""")
+        val t = myFixture.findClass("com.ae.x.T")
+        val root = StaticCallGraphWalker("com.ae.x").walk(t.findMethodsByName("entry", false).first())
+        assertTrue("应读出事务,实际:" + root.markers, root.markers.contains("事务"))
+        assertTrue("应读出异步,实际:" + root.markers, root.markers.contains("异步"))
+    }
+
+    fun testClassLevelTransactionalMarksMethod() {
+        myFixture.addClass("package org.springframework.stereotype; public @interface Service {}")
+        myFixture.addClass("package org.springframework.transaction.annotation; public @interface Transactional {}")
+        myFixture.addClass("""
+            package com.ae.x;
+            import org.springframework.stereotype.Service;
+            import org.springframework.transaction.annotation.Transactional;
+            @Service @Transactional public class TC { public void entry(){ } }""")
+        val tc = myFixture.findClass("com.ae.x.TC")
+        val root = StaticCallGraphWalker("com.ae.x").walk(tc.findMethodsByName("entry", false).first())
+        assertTrue("类级 @Transactional 应生效,实际:" + root.markers, root.markers.contains("事务"))
+    }
+
     fun testWalksComponentCallsSkipsLibAndFollowsPrivateHelper() {
         addBeans()
         val a = myFixture.findClass("com.ae.x.A")
