@@ -74,7 +74,7 @@ public final class ThreadmapCli {
             System.err.println("未设置 DASHSCOPE_API_KEY,使用离线 FakeAnnotator。");
             return new FakeAnnotator();
         }
-        ChatFn chat = QwenChatModels.create(key, QwenChatModels.DEFAULT_MODEL);
+        ChatFn chat = new DashScopeHttpChat(key, QwenChatModels.DEFAULT_MODEL);
         return new CachingAnnotator(new QwenAnnotator(chat, new FakeAnnotator()));
     }
 }
