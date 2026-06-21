@@ -252,6 +252,9 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             addSeparator()
             add(DefaultActionGroup("更多", true).apply {
                 templatePresentation.icon = AllIcons.Actions.More
+                add(toolbarAction("标注主干", "用 AI 标注当前链的主干(里程碑+祖先),省 token", AllIcons.Actions.Lightning) { annotateChain(true) })
+                add(toolbarAction("标注全链", "用 AI 标注当前链的全部节点", AllIcons.Actions.Lightning) { annotateChain(false) })
+                addSeparator()
                 add(toolbarAction("加载", "选择 annotated-tree.json 加载", AllIcons.Actions.MenuOpen) { chooseAndLoad() })
                 add(toolbarAction("展开", "展开调用树的所有节点", AllIcons.Actions.Expandall) { setAllExpanded(true) })
                 add(toolbarAction("折叠", "折叠除入口外的所有节点", AllIcons.Actions.Collapseall) { setAllExpanded(false) })
@@ -350,13 +353,13 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             background = JBColor(0xE8F5E9, 0x2C3B2E)
             border = JBUI.Borders.empty(2, 8)
             add(JBLabel("✓ 结构已就绪 — 想要每步的 AI 摘要 / 风险标注?"))
-            add(HyperlinkLabel("一键标注主干").apply { addHyperlinkListener { annotateSpine() } })
+            add(HyperlinkLabel("一键标注主干").apply { addHyperlinkListener { annotateChain(true) } })
             add(JBLabel("·"))
             add(HyperlinkLabel("命令行").apply { addHyperlinkListener { showAnnotateHowTo() } })
         }
 
-    /** 一键在插件内标注当前链的「主干」(直连 DashScope、不依赖 langchain4j;只标里程碑+祖先省 token)。 */
-    private fun annotateSpine() {
+    /** 一键在插件内标注当前链(直连 DashScope、不依赖 langchain4j)。spineOnly=true 只标主干省 token。 */
+    private fun annotateChain(spineOnly: Boolean) {
         val key = System.getenv("DASHSCOPE_API_KEY")
         if (key.isNullOrBlank()) {
             Messages.showWarningDialog(
@@ -373,7 +376,8 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             return
         }
         val basePackage = currentTree?.let { guessBasePackage(it.root.signature) } ?: ""
-        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "脉络:标注主干中…", true) {
+        val title = if (spineOnly) "脉络:标注主干中…" else "脉络:标注全链中…"
+        ProgressManager.getInstance().run(object : Task.Backgroundable(project, title, true) {
             override fun run(indicator: ProgressIndicator) {
                 val traceJson = Files.readString(tracePath)
                 val annotator = CachingAnnotator(
@@ -382,7 +386,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
                     PackageFolder(listOf(basePackage), 50),
                     annotator,
                     AnnotationRequestBuilder { node -> AnnotationRequest.ofSignature(node.signature) },
-                    true)
+                    spineOnly)
                 val tree = pipeline.run(traceJson)
                 Files.writeString(
                     Path.of(base, ".threadmap", "annotated-tree.json"),
