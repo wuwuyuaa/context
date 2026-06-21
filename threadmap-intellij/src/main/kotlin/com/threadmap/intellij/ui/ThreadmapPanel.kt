@@ -35,6 +35,7 @@ import com.threadmap.core.annotate.CachingAnnotator
 import com.threadmap.core.annotate.OpenAiCompatibleChat
 import com.threadmap.intellij.settings.ThreadmapConfigurable
 import com.threadmap.intellij.settings.ThreadmapSettings
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.threadmap.core.annotate.PackageFolder
 import com.threadmap.core.annotate.QwenAnnotator
@@ -406,20 +407,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         val settings = ThreadmapSettings.getInstance()
         val baseUrl = settings.baseUrl
         val model = settings.model
-        val key = settings.apiKey
-        // 本地 Ollama 可不填 key;其余服务商需要 key。baseUrl/model 始终必填。
-        val needsKey = !baseUrl.contains("localhost") && !baseUrl.contains("127.0.0.1")
-        if (baseUrl.isBlank() || model.isBlank() || (needsKey && key.isBlank())) {
-            val choice = Messages.showOkCancelDialog(
-                project,
-                "还没配置 LLM 服务商 / API Key。\n现在去「设置 → Tools → 脉络 Threadmap」选服务商并填 key?",
-                "脉络:需要配置 LLM",
-                "去设置", "取消", null)
-            if (choice == Messages.OK) {
-                ShowSettingsUtil.getInstance().showSettingsDialog(project, ThreadmapConfigurable::class.java)
-            }
-            return
-        }
+        // key 读 PasswordSafe 是慢操作,放后台线程读(EDT 上读会触发 SlowOperations + 卡 UI)。
         val base = project.basePath ?: return
         val tracePath = Path.of(base, ".threadmap", "static-trace.json")
         if (!Files.isRegularFile(tracePath)) {
@@ -430,6 +418,13 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         val title = if (spineOnly) "脉络:标注主干中…" else "脉络:标注全链中…"
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, title, true) {
             override fun run(indicator: ProgressIndicator) {
+                val key = settings.apiKey // 后台线程读 PasswordSafe
+                // 本地 Ollama 可不填 key;其余服务商需要 key。baseUrl/model 有默认值,始终非空。
+                val needsKey = !baseUrl.contains("localhost") && !baseUrl.contains("127.0.0.1")
+                if (baseUrl.isBlank() || model.isBlank() || (needsKey && key.isBlank())) {
+                    ApplicationManager.getApplication().invokeLater { promptOpenSettings() }
+                    return
+                }
                 val traceJson = Files.readString(tracePath)
                 // 严格模式:不传 FakeAnnotator 兜底。LLM 失败就抛真错→onThrowable,
                 // 绝不用假摘要冒充成功(否则用户拿到一棵「看着标注成功」实则全假的树)。
@@ -457,6 +452,18 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
                     "脉络:标注失败")
             }
         })
+    }
+
+    /** 未配置 LLM 时弹窗引导去设置页(在 EDT 调用)。 */
+    private fun promptOpenSettings() {
+        val choice = Messages.showOkCancelDialog(
+            project,
+            "还没配置 LLM 服务商 / API Key。\n现在去「设置 → Tools → 脉络 Threadmap」选服务商并填 key?",
+            "脉络:需要配置 LLM",
+            "去设置", "取消", null)
+        if (choice == Messages.OK) {
+            ShowSettingsUtil.getInstance().showSettingsDialog(project, ThreadmapConfigurable::class.java)
+        }
     }
 
     private fun guessBasePackage(signature: String): String {
