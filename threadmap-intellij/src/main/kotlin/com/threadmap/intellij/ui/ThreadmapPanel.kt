@@ -234,6 +234,9 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             add(toolbarAction("刷新", "重新加载当前项目的调用树", AllIcons.Actions.Refresh) {
                 loadDefault()
             })
+            add(toolbarAction("标注主干", "用 AI 标注当前链的主干(里程碑+祖先),省 token", AllIcons.Actions.Lightning) {
+                annotateChain(true)
+            })
             if (graphPanel != null) {
                 addSeparator()
                 add(object : ToggleAction("图视图", "在树与调用图之间切换", AllIcons.Actions.GroupBy) {
@@ -252,8 +255,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             addSeparator()
             add(DefaultActionGroup("更多", true).apply {
                 templatePresentation.icon = AllIcons.Actions.More
-                add(toolbarAction("标注主干", "用 AI 标注当前链的主干(里程碑+祖先),省 token", AllIcons.Actions.Lightning) { annotateChain(true) })
-                add(toolbarAction("标注全链", "用 AI 标注当前链的全部节点", AllIcons.Actions.Lightning) { annotateChain(false) })
+                add(toolbarAction("标注全链", "用 AI 标注当前链的全部节点(更全但更费 token)", AllIcons.Actions.Lightning) { annotateChain(false) })
                 addSeparator()
                 add(toolbarAction("加载", "选择 annotated-tree.json 加载", AllIcons.Actions.MenuOpen) { chooseAndLoad() })
                 add(toolbarAction("展开", "展开调用树的所有节点", AllIcons.Actions.Expandall) { setAllExpanded(true) })
