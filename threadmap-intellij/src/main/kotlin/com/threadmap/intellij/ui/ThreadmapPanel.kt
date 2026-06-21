@@ -31,8 +31,6 @@ import com.threadmap.core.annotate.AnnotatedTree
 import com.threadmap.core.annotate.AnnotatedTreeJsonReader
 import com.threadmap.core.annotate.AnnotatedTreeJsonWriter
 import com.threadmap.core.annotate.AnnotationPipeline
-import com.threadmap.core.annotate.AnnotationRequest
-import com.threadmap.core.annotate.AnnotationRequestBuilder
 import com.threadmap.core.annotate.CachingAnnotator
 import com.threadmap.core.annotate.OpenAiCompatibleChat
 import com.threadmap.intellij.settings.ThreadmapConfigurable
@@ -52,6 +50,7 @@ import com.threadmap.intellij.model.TreeFilter
 import com.threadmap.intellij.model.UnderstandingFilter
 import com.threadmap.intellij.psi.EntryPoint
 import com.threadmap.intellij.psi.EntryPointScanner
+import com.threadmap.intellij.psi.PsiSourceRequestBuilder
 import com.threadmap.intellij.psi.StaticChain
 import com.intellij.openapi.application.ReadAction
 import com.intellij.psi.PsiMethod
@@ -401,7 +400,8 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
                 val pipeline = AnnotationPipeline(
                     PackageFolder(listOf(basePackage), 50),
                     annotator,
-                    AnnotationRequestBuilder { node -> AnnotationRequest.ofSignature(node.signature) },
+                    // 2b:用 PSI 抽方法源码喂 LLM(而非仅签名),摘要才有据;抽不到自动退回仅签名
+                    PsiSourceRequestBuilder(project),
                     spineOnly)
                 val tree = pipeline.run(traceJson)
                 Files.writeString(
