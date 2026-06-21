@@ -10,6 +10,9 @@
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="脉络 (Threadmap)" anchor="right" secondary="false"
                     factoryClass="com.threadmap.intellij.ui.ThreadmapToolWindowFactory"/>
+        <applicationConfigurable parentId="tools" id="com.threadmap.settings"
+                                 displayName="脉络 Threadmap"
+                                 instance="com.threadmap.intellij.settings.ThreadmapConfigurable"/>
     </extensions>
 
     <actions>

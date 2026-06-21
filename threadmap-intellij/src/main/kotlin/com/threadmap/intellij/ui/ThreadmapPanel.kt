@@ -34,7 +34,10 @@ import com.threadmap.core.annotate.AnnotationPipeline
 import com.threadmap.core.annotate.AnnotationRequest
 import com.threadmap.core.annotate.AnnotationRequestBuilder
 import com.threadmap.core.annotate.CachingAnnotator
-import com.threadmap.core.annotate.DashScopeHttpChat
+import com.threadmap.core.annotate.OpenAiCompatibleChat
+import com.threadmap.intellij.settings.ThreadmapConfigurable
+import com.threadmap.intellij.settings.ThreadmapSettings
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.threadmap.core.annotate.FakeAnnotator
 import com.threadmap.core.annotate.PackageFolder
 import com.threadmap.core.annotate.QwenAnnotator
@@ -357,18 +360,30 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             add(JBLabel("✓ 结构已就绪 — 想要每步的 AI 摘要 / 风险标注?"))
             add(HyperlinkLabel("一键标注主干").apply { addHyperlinkListener { annotateChain(true) } })
             add(JBLabel("·"))
-            add(HyperlinkLabel("命令行").apply { addHyperlinkListener { showAnnotateHowTo() } })
+            add(HyperlinkLabel("选服务商").apply {
+                addHyperlinkListener {
+                    ShowSettingsUtil.getInstance().showSettingsDialog(project, ThreadmapConfigurable::class.java)
+                }
+            })
         }
 
     /** 一键在插件内标注当前链(直连 DashScope、不依赖 langchain4j)。spineOnly=true 只标主干省 token。 */
     private fun annotateChain(spineOnly: Boolean) {
-        val key = System.getenv("DASHSCOPE_API_KEY")
-        if (key.isNullOrBlank()) {
-            Messages.showWarningDialog(
+        val settings = ThreadmapSettings.getInstance()
+        val baseUrl = settings.baseUrl
+        val model = settings.model
+        val key = settings.apiKey
+        // 本地 Ollama 可不填 key;其余服务商需要 key。baseUrl/model 始终必填。
+        val needsKey = !baseUrl.contains("localhost") && !baseUrl.contains("127.0.0.1")
+        if (baseUrl.isBlank() || model.isBlank() || (needsKey && key.isBlank())) {
+            val choice = Messages.showOkCancelDialog(
                 project,
-                "未检测到环境变量 DASHSCOPE_API_KEY。\n请在启动 IDE 的环境里设置它(插件设置页填 key 的功能后续加)。",
-                "脉络:缺少 API Key"
-            )
+                "还没配置 LLM 服务商 / API Key。\n现在去「设置 → Tools → 脉络 Threadmap」选服务商并填 key?",
+                "脉络:需要配置 LLM",
+                "去设置", "取消", null)
+            if (choice == Messages.OK) {
+                ShowSettingsUtil.getInstance().showSettingsDialog(project, ThreadmapConfigurable::class.java)
+            }
             return
         }
         val base = project.basePath ?: return
@@ -383,7 +398,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             override fun run(indicator: ProgressIndicator) {
                 val traceJson = Files.readString(tracePath)
                 val annotator = CachingAnnotator(
-                    QwenAnnotator(DashScopeHttpChat(key, "qwen-flash"), FakeAnnotator()))
+                    QwenAnnotator(OpenAiCompatibleChat(baseUrl, key, model), FakeAnnotator()))
                 val pipeline = AnnotationPipeline(
                     PackageFolder(listOf(basePackage), 50),
                     annotator,
@@ -405,21 +420,6 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         val fqn = signature.substringBefore('#')
         val parts = fqn.split('.')
         return if (parts.size >= 3) parts.take(3).joinToString(".") else fqn.substringBeforeLast('.')
-    }
-
-    private fun showAnnotateHowTo() {
-        val base = project.basePath ?: "<项目根>"
-        val cmd = "DASHSCOPE_API_KEY=<你的key> ./gradlew :threadmap-core:runCli \\\n" +
-            "  --args=\"--spine $base/.threadmap/static-trace.json " +
-            "$base/.threadmap/annotated-tree.json <基础包> $base/<源码根>\"\n" +
-            "(--spine = 只标主干省 token;想全量标就去掉 --spine)"
-        Messages.showInfoMessage(
-            project,
-            "在引擎仓库执行(LLM 只在离线侧,不进插件):\n\n$cmd\n\n" +
-                "跑完回来点工具栏「刷新」,即带上 AI 摘要 / 风险 / 副作用。\n" +
-                "不设 DASHSCOPE_API_KEY 则用离线 FakeAnnotator(无需联网)。",
-            "给这条链补 AI 标注"
-        )
     }
 
     private fun chooseAndLoad() {
