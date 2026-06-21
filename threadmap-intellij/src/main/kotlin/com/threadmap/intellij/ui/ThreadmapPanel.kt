@@ -29,6 +29,18 @@ import com.intellij.util.ui.UIUtil
 import com.threadmap.core.annotate.AnnotatedNode
 import com.threadmap.core.annotate.AnnotatedTree
 import com.threadmap.core.annotate.AnnotatedTreeJsonReader
+import com.threadmap.core.annotate.AnnotatedTreeJsonWriter
+import com.threadmap.core.annotate.AnnotationPipeline
+import com.threadmap.core.annotate.AnnotationRequest
+import com.threadmap.core.annotate.AnnotationRequestBuilder
+import com.threadmap.core.annotate.CachingAnnotator
+import com.threadmap.core.annotate.DashScopeHttpChat
+import com.threadmap.core.annotate.FakeAnnotator
+import com.threadmap.core.annotate.PackageFolder
+import com.threadmap.core.annotate.QwenAnnotator
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.Task
 import com.threadmap.intellij.model.CallGraph
 import com.threadmap.intellij.model.CallGraphBuilder
 import com.threadmap.intellij.model.CallTreeNodeBuilder
@@ -338,8 +350,56 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             background = JBColor(0xE8F5E9, 0x2C3B2E)
             border = JBUI.Borders.empty(2, 8)
             add(JBLabel("✓ 结构已就绪 — 想要每步的 AI 摘要 / 风险标注?"))
-            add(HyperlinkLabel("怎么做").apply { addHyperlinkListener { showAnnotateHowTo() } })
+            add(HyperlinkLabel("一键标注主干").apply { addHyperlinkListener { annotateSpine() } })
+            add(JBLabel("·"))
+            add(HyperlinkLabel("命令行").apply { addHyperlinkListener { showAnnotateHowTo() } })
         }
+
+    /** 一键在插件内标注当前链的「主干」(直连 DashScope、不依赖 langchain4j;只标里程碑+祖先省 token)。 */
+    private fun annotateSpine() {
+        val key = System.getenv("DASHSCOPE_API_KEY")
+        if (key.isNullOrBlank()) {
+            Messages.showWarningDialog(
+                project,
+                "未检测到环境变量 DASHSCOPE_API_KEY。\n请在启动 IDE 的环境里设置它(插件设置页填 key 的功能后续加)。",
+                "脉络:缺少 API Key"
+            )
+            return
+        }
+        val base = project.basePath ?: return
+        val tracePath = Path.of(base, ".threadmap", "static-trace.json")
+        if (!Files.isRegularFile(tracePath)) {
+            Messages.showWarningDialog(project, "还没有可标注的链路,请先看一条链。", "脉络:无链路")
+            return
+        }
+        val basePackage = currentTree?.let { guessBasePackage(it.root.signature) } ?: ""
+        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "脉络:标注主干中…", true) {
+            override fun run(indicator: ProgressIndicator) {
+                val traceJson = Files.readString(tracePath)
+                val annotator = CachingAnnotator(
+                    QwenAnnotator(DashScopeHttpChat(key, "qwen-flash"), FakeAnnotator()))
+                val pipeline = AnnotationPipeline(
+                    PackageFolder(listOf(basePackage), 50),
+                    annotator,
+                    AnnotationRequestBuilder { node -> AnnotationRequest.ofSignature(node.signature) },
+                    true)
+                val tree = pipeline.run(traceJson)
+                Files.writeString(
+                    Path.of(base, ".threadmap", "annotated-tree.json"),
+                    AnnotatedTreeJsonWriter().toJson(tree))
+            }
+            override fun onSuccess() = loadDefault()
+            override fun onThrowable(error: Throwable) {
+                Messages.showErrorDialog(project, "标注失败:${error.message}", "脉络:标注失败")
+            }
+        })
+    }
+
+    private fun guessBasePackage(signature: String): String {
+        val fqn = signature.substringBefore('#')
+        val parts = fqn.split('.')
+        return if (parts.size >= 3) parts.take(3).joinToString(".") else fqn.substringBeforeLast('.')
+    }
 
     private fun showAnnotateHowTo() {
         val base = project.basePath ?: "<项目根>"
