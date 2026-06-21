@@ -79,9 +79,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         toolTipText = "按掌握状态过滤"
     }
     private val todoOnly = JBCheckBox("只看待查项")
-    private val spineOnly = JBCheckBox("只看主干").apply {
-        toolTipText = "只显示有副作用的主干(落库 / 调外部 / 发消息)及通往它的路径,枝节折起"
-    }
+    private var spineFilterOn = false
     private val search = SearchTextField(false).apply {
         textEditor.emptyText.text = "过滤方法 / 类名"
         preferredSize = Dimension(JBUI.scale(190), preferredSize.height)
@@ -233,6 +231,12 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
                     override fun setSelected(e: AnActionEvent, state: Boolean) { setGraphMode(state) }
                 })
             }
+            add(object : ToggleAction("只看主干", "只显示有副作用的主干(落库 / 调外部 / 发消息)及其路径,枝节折起", AllIcons.General.Filter) {
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+                override fun displayTextInToolbar(): Boolean = true
+                override fun isSelected(e: AnActionEvent): Boolean = spineFilterOn
+                override fun setSelected(e: AnActionEvent, state: Boolean) { spineFilterOn = state; applyFilters() }
+            })
             addSeparator()
             add(DefaultActionGroup("更多", true).apply {
                 templatePresentation.icon = AllIcons.Actions.More
@@ -251,7 +255,6 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             add(JBLabel("状态"))
             add(statusFilter)
             add(todoOnly)
-            add(spineOnly)
             add(search)
         }
 
@@ -275,7 +278,6 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
     private fun wireFilters() {
         statusFilter.addActionListener { applyFilters() }
         todoOnly.addActionListener { applyFilters() }
-        spineOnly.addActionListener { applyFilters() }
         search.addDocumentListener(object : DocumentAdapter() {
             override fun textChanged(e: DocumentEvent) = applyFilters()
         })
@@ -290,7 +292,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         understanding = statusFilter.selectedItem as? UnderstandingFilter
             ?: UnderstandingFilter.ALL,
         todoOnly = todoOnly.isSelected,
-        spineOnly = spineOnly.isSelected,
+        spineOnly = spineFilterOn,
         query = search.text
     )
 
