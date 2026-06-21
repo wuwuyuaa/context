@@ -52,6 +52,7 @@ import com.threadmap.intellij.model.TreeFilter
 import com.threadmap.intellij.model.UnderstandingFilter
 import com.threadmap.intellij.psi.EntryPoint
 import com.threadmap.intellij.psi.EntryPointScanner
+import com.threadmap.intellij.model.DiskAnnotationCache
 import com.threadmap.intellij.model.SourceHash
 import com.threadmap.intellij.psi.PsiMethodSource
 import com.threadmap.intellij.psi.PsiSourceRequestBuilder
@@ -430,8 +431,10 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
                 val traceJson = Files.readString(tracePath)
                 // 严格模式:不传 FakeAnnotator 兜底。LLM 失败就抛真错→onThrowable,
                 // 绝不用假摘要冒充成功(否则用户拿到一棵「看着标注成功」实则全假的树)。
-                val annotator = CachingAnnotator(
-                    QwenAnnotator(OpenAiCompatibleChat(baseUrl, key, model)))
+                // 外层磁盘缓存:按源码 hash 跨链路/跨次复用,命中跳过 LLM 省 token。
+                val annotator = DiskAnnotationCache(
+                    CachingAnnotator(QwenAnnotator(OpenAiCompatibleChat(baseUrl, key, model))),
+                    Path.of(base, ".threadmap", "annotation-cache.json"))
                 val pipeline = AnnotationPipeline(
                     PackageFolder(listOf(basePackage), 50),
                     annotator,
@@ -439,6 +442,7 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
                     PsiSourceRequestBuilder(project),
                     spineOnly)
                 val tree = pipeline.run(traceJson)
+                annotator.flush() // 新增缓存落盘
                 Files.writeString(
                     Path.of(base, ".threadmap", "annotated-tree.json"),
                     AnnotatedTreeJsonWriter().toJson(tree))
