@@ -38,7 +38,6 @@ import com.threadmap.core.annotate.OpenAiCompatibleChat
 import com.threadmap.intellij.settings.ThreadmapConfigurable
 import com.threadmap.intellij.settings.ThreadmapSettings
 import com.intellij.openapi.options.ShowSettingsUtil
-import com.threadmap.core.annotate.FakeAnnotator
 import com.threadmap.core.annotate.PackageFolder
 import com.threadmap.core.annotate.QwenAnnotator
 import com.intellij.openapi.progress.ProgressIndicator
@@ -395,8 +394,10 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, title, true) {
             override fun run(indicator: ProgressIndicator) {
                 val traceJson = Files.readString(tracePath)
+                // 严格模式:不传 FakeAnnotator 兜底。LLM 失败就抛真错→onThrowable,
+                // 绝不用假摘要冒充成功(否则用户拿到一棵「看着标注成功」实则全假的树)。
                 val annotator = CachingAnnotator(
-                    QwenAnnotator(OpenAiCompatibleChat(baseUrl, key, model), FakeAnnotator()))
+                    QwenAnnotator(OpenAiCompatibleChat(baseUrl, key, model)))
                 val pipeline = AnnotationPipeline(
                     PackageFolder(listOf(basePackage), 50),
                     annotator,
@@ -409,7 +410,13 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
             }
             override fun onSuccess() = loadDefault()
             override fun onThrowable(error: Throwable) {
-                Messages.showErrorDialog(project, "标注失败:${error.message}", "脉络:标注失败")
+                Messages.showErrorDialog(
+                    project,
+                    "AI 标注失败,未写入任何标注(已有的旧标注保持不变)。\n\n" +
+                        "原因:${error.message}\n\n" +
+                        "请检查:服务商地址 / 模型名 / API Key 是否正确、网络是否可达;" +
+                        "在 ⋮ → 选服务商 / API Key… 改好后,重新点「标注主干」即可重试。",
+                    "脉络:标注失败")
             }
         })
     }

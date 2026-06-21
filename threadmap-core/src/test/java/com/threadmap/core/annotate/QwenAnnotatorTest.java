@@ -49,4 +49,23 @@ class QwenAnnotatorTest {
         Annotation a = annotator.annotate(AnnotationRequest.ofSignature("X#y()"));
         assertTrue(a.summary().contains("调用 y"), "应降级到 fake,实际:" + a.summary());
     }
+
+    @Test
+    void rethrowsOriginalWhenNoFallback() {
+        // 严格模式(插件交互标注用):失败必须抛真错,绝不伪造 fake 摘要冒充成功。
+        ChatFn boom = prompt -> { throw new RuntimeException("LLM HTTP 401: bad key"); };
+        QwenAnnotator strict = new QwenAnnotator(boom);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                strict.annotate(AnnotationRequest.ofSignature("com.example.S#m()")));
+        assertTrue(ex.getMessage().contains("401"),
+                "应抛出原始错误,而非降级伪造。实际:" + ex.getMessage());
+    }
+
+    @Test
+    void strictModeAlsoRethrowsOnUnparseableReply() {
+        QwenAnnotator strict = new QwenAnnotator(prompt -> "这不是 JSON");
+        assertThrows(RuntimeException.class, () ->
+                strict.annotate(AnnotationRequest.ofSignature("X#y()")));
+    }
 }
