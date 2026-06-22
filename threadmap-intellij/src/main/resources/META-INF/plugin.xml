@@ -1,8 +1,9 @@
 <idea-plugin>
-    <id>com.threadmap.intellij</id>
-    <name>脉络 Threadmap</name>
+    <id>com.threadmap</id>
+    <name>Threadmap</name>
     <vendor>threadmap</vendor>
-    <description><![CDATA[
+    <description><![CDATA[Threadmap is a "code takeover" assistant for Spring projects in IntelliJ IDEA: trace one call chain from an HTTP entry point, read its Spring semantics and static-link confidence, and optionally let your own LLM summarize each method from its source code.
+<br><br>
 <b>脉络 (Threadmap)</b> —— Spring 项目接管助手。从 HTTP 入口静态走出一条调用链,在工具窗里把它读懂:
 <ul>
 <li><b>入口清单</b> → 点一个,静态走出它的调用树(穿透接口到实现,并标注链路可信度:单实现推断 / 多实现不确定);</li>
