@@ -36,4 +36,4 @@
 
 ## 许可
 
-待定(发布前需补 LICENSE,见下方 TODO)。
+[MIT](LICENSE)。
