@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.threadmap"
-version = "0.1.0-SNAPSHOT"
+version = "0.1.0"
 
 repositories {
     mavenCentral()
@@ -43,6 +43,11 @@ intellijPlatform {
         ideaVersion {
             sinceBuild = "242"
             untilBuild = "252.*" // 兼容上限:用稳定的 Java PSI API,放宽到 2025.2.*;新版 IDE 出后再放
+        }
+    }
+    pluginVerification {
+        ides {
+            recommended() // 按兼容范围挑 IDE 做 API 兼容校验(等同 Marketplace 上架前的检查)
         }
     }
 }
