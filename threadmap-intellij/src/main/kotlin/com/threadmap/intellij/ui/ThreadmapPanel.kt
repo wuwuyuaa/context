@@ -137,7 +137,9 @@ class ThreadmapPanel(private val project: Project) : SimpleToolWindowPanel(true,
     private fun applyResponsiveLayout() {
         val w = width
         if (w <= 0) return
-        val narrow = w < JBUI.scale(720)
+        // 默认上下排(树在上、详情在下)——停靠面板通常偏窄,上下排详情才不挤;
+        // 只有把面板拖得很宽(≥1200)才切回左右排。
+        val narrow = w < JBUI.scale(1200)
         currentSplitter?.let {
             it.orientation = narrow
             it.proportion = if (narrow) 0.55f else 0.68f
