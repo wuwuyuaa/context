@@ -42,7 +42,7 @@ intellijPlatform {
     pluginConfiguration {
         ideaVersion {
             sinceBuild = "242"
-            untilBuild = "252.*" // 兼容上限:用稳定的 Java PSI API,放宽到 2025.2.*;新版 IDE 出后再放
+            untilBuild = "261.*" // 覆盖到 2026.1(用户在用的 IDE);去掉了 displayTextInToolbar 等将移除 API,新版更稳
         }
     }
     pluginVerification {
