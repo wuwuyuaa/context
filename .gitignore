@@ -3,3 +3,6 @@ build/
 .idea/
 .threadmap/
 .intellijPlatform/
+
+# macOS
+.DS_Store
